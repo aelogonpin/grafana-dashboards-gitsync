@@ -11,6 +11,8 @@ Este repo es una **caja de paneles de Grafana**. Tú metes los paneles aquí, y 
 4. Grafana de cada cliente mira su carpeta y muestra los paneles (Git Sync)
 ```
 
+> ¿Aún no lo tienes montado? Empieza por el [quick start](QUICKSTART.md).
+
 Y además cada cliente tiene su **cajón propio** para paneles solo suyos: `tenants/<cliente>/custom/`.
 
 ## Las 3 reglas de oro

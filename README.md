@@ -7,7 +7,7 @@ Paneles de Grafana para varios clientes (una org de Grafana por cliente), sincro
 - Cada cliente puede añadir paneles **propios** en `tenants/<cliente>/custom/` cuando quiera.
 - Un **Job** (Kubernetes o Docker) crea la conexión de Git Sync de cada cliente si no existe.
 
-> **¿Primera vez? Empieza por el [manual de uso](docs/MANUAL.md).**
+> **¿Primera vez? Sigue el [quick start](docs/QUICKSTART.md)** (de cero a tu primer panel en ~20 min) y luego el [manual de uso](docs/MANUAL.md).
 
 > Repo público con datos de prueba. **No subas nunca tokens, contraseñas ni datos reales de clientes.**
 
