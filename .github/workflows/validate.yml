@@ -1,0 +1,30 @@
+# En cada PR: valida el config y los paneles sin escribir nada,
+# y rechaza cambios hechos a mano en tenants/*/general/ (los genera el bot).
+name: validate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sin cambios manuales en tenants/*/general/
+        run: |
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E '^tenants/[^/]+/general/' || true)
+          if [ -n "$changed" ]; then
+            echo "::error::Estos ficheros se generan desde master/ y no se editan a mano:"
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Validar config y paneles
+        run: scripts/render.sh --check

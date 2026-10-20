@@ -1,0 +1,86 @@
+{
+  "uid": "gen-k8s-logs",
+  "title": "Tienda - Logs",
+  "tags": [
+    "demo"
+  ],
+  "schemaVersion": 41,
+  "refresh": "30s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "ds_mimir",
+        "label": "Mimir",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "/^Mimir/",
+        "hide": 2
+      },
+      {
+        "name": "ds_loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "regex": "/^Loki/",
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Logs por nivel",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds_loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds_loki}"
+          },
+          "expr": "sum by (level) (count_over_time({app=\"tienda\"}[1m]))",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "id": 1
+    },
+    {
+      "type": "logs",
+      "title": "Logs de la tienda",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${ds_loki}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${ds_loki}"
+          },
+          "expr": "{app=\"tienda\"}"
+        }
+      ],
+      "id": 2
+    }
+  ]
+}

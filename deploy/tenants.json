@@ -1,0 +1,26 @@
+{
+  "repo": {
+    "url": "https://github.com/aelogonpin/grafana-dashboards-gitsync",
+    "branch": "main"
+  },
+  "tenants": [
+    {
+      "name": "cliente-a",
+      "orgId": 1,
+      "gitSync": true,
+      "path": "tenants/cliente-a"
+    },
+    {
+      "name": "cliente-b",
+      "orgId": 2,
+      "gitSync": true,
+      "path": "tenants/cliente-b"
+    },
+    {
+      "name": "cliente-c",
+      "orgId": 3,
+      "gitSync": false,
+      "path": "tenants/cliente-c"
+    }
+  ]
+}

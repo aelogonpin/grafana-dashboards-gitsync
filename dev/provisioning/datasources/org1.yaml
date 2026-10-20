@@ -1,0 +1,20 @@
+# Solo la org 1: Grafana no arranca si un datasource apunta a una org que no existe.
+# Las demás orgs y sus datasources los crea dev/init-orgs.sh por API.
+# Cada datasource lleva la cabecera X-Scope-OrgID de su cliente: solo ve sus datos.
+apiVersion: 1
+datasources:
+  - name: Mimir-cliente-a
+    type: prometheus
+    orgId: 1
+    url: http://mimir:9009/prometheus
+    access: proxy
+    isDefault: true
+    jsonData: { httpHeaderName1: X-Scope-OrgID }
+    secureJsonData: { httpHeaderValue1: cliente-a }
+  - name: Loki-cliente-a
+    type: loki
+    orgId: 1
+    url: http://loki:3100
+    access: proxy
+    jsonData: { httpHeaderName1: X-Scope-OrgID }
+    secureJsonData: { httpHeaderValue1: cliente-a }

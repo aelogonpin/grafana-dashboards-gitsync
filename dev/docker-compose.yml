@@ -1,0 +1,97 @@
+# Entorno local de pruebas: Grafana multi-org + Postgres + stack de datos real
+# (Mimir y Loki multi-tenant) + Job de Git Sync como init container.
+# Uso: ver README (sección "Entorno de pruebas").
+name: gitsync-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: grafana
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: grafana
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grafana"]
+      interval: 3s
+      retries: 20
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ["3001:3000"]
+    environment:
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: grafana
+      GF_DATABASE_PASSWORD: grafana
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SERVER_ROOT_URL: http://localhost:3001/
+    volumes:
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
+      interval: 5s
+      retries: 40
+
+  # ---- Stack de datos (simula producción en pequeño) ----
+  mimir:
+    image: grafana/mimir:2.17.0
+    command: ["-config.file=/etc/mimir.yaml", "-target=all"]
+    volumes: ["./stack/mimir.yaml:/etc/mimir.yaml:ro"]
+
+  loki:
+    image: grafana/loki:3.5.5
+    command: ["-config.file=/etc/loki.yaml"]
+    volumes: ["./stack/loki.yaml:/etc/loki.yaml:ro"]
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.11.1
+
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.11.2
+    depends_on: [mimir, node-exporter]
+    volumes: ["./stack/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+
+  log-generator:
+    image: alpine:3.20
+    depends_on: [loki]
+    environment:
+      LOKI_URL: http://loki:3100
+    volumes: ["./stack/log-generator.sh:/work/log-generator.sh:ro"]
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache -q curl && sh /work/log-generator.sh"]
+
+  # ---- Inicialización ----
+  # Crea las orgs 2..N y sus datasources (en producción ya existen).
+  orgs-init:
+    image: alpine:3.20
+    depends_on:
+      grafana: { condition: service_healthy }
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_USER: admin
+      GRAFANA_PASSWORD: admin
+      TENANTS_FILE: /work/tenants.json
+    volumes:
+      - ../deploy/tenants.json:/work/tenants.json:ro
+      - ./init-orgs.sh:/work/init-orgs.sh:ro
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache -q curl jq && sh /work/init-orgs.sh"]
+
+  # El mismo script que el Job de Kubernetes, como init container.
+  gitsync-init:
+    image: alpine:3.20
+    depends_on:
+      orgs-init: { condition: service_completed_successfully }
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_USER: admin
+      GRAFANA_PASSWORD: admin
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      TENANTS_FILE: /work/tenants.json
+      DRY_RUN: ${DRY_RUN:-false}
+    volumes:
+      - ../deploy/tenants.json:/work/tenants.json:ro
+      - ../deploy/gitsync/gitsync-sync.sh:/work/gitsync-sync.sh:ro
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache -q curl jq && sh /work/gitsync-sync.sh"]

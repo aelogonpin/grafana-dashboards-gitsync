@@ -1,0 +1,10 @@
+{
+  "apiVersion": "folder.grafana.app/v1beta1",
+  "kind": "Folder",
+  "metadata": {
+    "name": "gen"
+  },
+  "spec": {
+    "title": "Paneles generales"
+  }
+}

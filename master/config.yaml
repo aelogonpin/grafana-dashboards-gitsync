@@ -1,0 +1,30 @@
+# Única fuente de verdad: qué carpetas generales recibe cada cliente.
+#
+# Rutas relativas a master/general/. Una ruta incluye todo lo que cuelga de ella.
+# exclude quita rutas de lo seleccionado. Los paneles propios del cliente van en
+# tenants/<cliente>/custom/ y nunca se tocan.
+
+repo:
+  url: https://github.com/aelogonpin/grafana-dashboards-gitsync
+  branch: main
+tenants:
+  cliente-a:
+    orgId: 1
+    gitSync: true # el Job crea su conexión de Git Sync si no existe
+    general:
+      - kubernetes
+      - aplicacion
+    exclude:
+      - aplicacion/licencias
+  cliente-b:
+    orgId: 2
+    gitSync: true
+    general:
+      - kubernetes
+      - alertas
+  cliente-c:
+    orgId: 3
+    gitSync: false # aún no se conecta
+    general:
+      - aplicacion/metrics/api.json # también se puede elegir un fichero suelto
+      - alertas

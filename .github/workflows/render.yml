@@ -1,0 +1,41 @@
+# En cada push a main: genera tenants/*/general/ y deploy/tenants.json desde master/
+# y los sube en un único commit del bot. Sin cambios, no hace commit.
+name: render-tenants
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "master/**"
+      - "tenants/*/custom/**"
+      - "scripts/**"
+      - ".github/workflows/render.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-tenants
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generar y validar
+        run: scripts/render.sh
+
+      - name: Commit de los cambios generados
+        run: |
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "Sin cambios que subir."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tenants deploy/tenants.json
+          git commit -m "chore: regenerar paneles de clientes desde master"
+          git push
