@@ -43,12 +43,13 @@ Y, si toca, añade la carpeta a los clientes en `master/config.yaml` (ver la ski
 
 ```bash
 scripts/render.sh --check
+dev/check-queries.sh <destino.json> <org>     # si el entorno dev/ está levantado: cada consulta debe dar OK
 ```
 
-Requiere `yq` v4 (mikefarah) en el PATH. Si no está, descárgalo en un directorio temporal: `https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64`.
+`render.sh` requiere `yq` v4 (mikefarah) en el PATH; cómo instalarlo, en la skill `probar-en-local`.
 
-Errores típicos: `datasource con UID fijo` (falta convertir), `uid repetido` (cambia el uid), `variables sin definir` (falta el bloque templating).
+Errores típicos: `datasource con UID fijo` (falta convertir), `uid repetido` (cambia el uid), `variables sin definir` (falta el bloque templating). Si el panel es nuevo y debe mostrar datos realistas, sigue la skill `panel-con-datos`.
 
-## 5. Commit
+## 5. Publicar
 
-Un commit en español que diga qué panel y para quién. Al hacer push a `main`, la Action `render-tenants` reparte el panel y Git Sync lo carga en cada org en ~1 minuto. No hagas push sin que el usuario lo pida.
+Solo si el usuario lo pide, y siempre con la skill `publicar-cambios`: el repo es público. Al hacer push a `main`, la Action `render-tenants` reparte el panel y Git Sync lo carga en cada org en ~1 minuto.

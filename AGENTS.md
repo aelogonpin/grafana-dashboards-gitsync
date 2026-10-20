@@ -9,7 +9,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - `scripts/render.sh`: lógica determinista (bash + yq v4 + jq + rsync, **sin IA**). Genera `tenants/<cliente>/general/` (con `rsync --delete`), crea los `_folder.json` y `deploy/tenants.json`, y valida. `--check` no escribe nada.
 - `.github/workflows/render.yml`: en push a `main` ejecuta render y hace commit del bot. `validate.yml`: en PRs ejecuta `--check` y rechaza cambios en `tenants/*/general/`.
 - `deploy/gitsync/gitsync-sync.sh`: Job idempotente (sh + curl + jq). Por cada cliente con `gitSync: true`, si no existe el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>`, lo crea con `path: tenants/<cliente>` y `target: folder`. **Corre como Job de Kubernetes (`deploy/`, hook PostSync de ArgoCD) o como init container en Docker. Nunca en GitHub Actions** (requisito del usuario).
-- `dev/`: Grafana 13.2.4 + Postgres + Mimir 2.17 y Loki 3.5 multi-tenant (`X-Scope-OrgID` = nombre del cliente) + Prometheus/node-exporter + generador de logs. Grafana en http://localhost:3001 (admin/admin).
+- `dev/`: Grafana 13.2.4 + Postgres + Mimir 2.17 y Loki 3.5 multi-tenant (`X-Scope-OrgID` = nombre del cliente) + Prometheus/node-exporter + generador de logs realistas de una tienda online (logfmt). Grafana en http://localhost:3001 (admin/admin). Puerto, contraseña, URL y token, en `dev/.env` (plantilla: `dev/.env.example`). Herramientas: `dev/status.sh`, `dev/check-isolation.sh` y `dev/check-queries.sh <panel.json> [org]`.
 
 ## Reglas y aprendizajes (comprobados en Grafana 13.x)
 
@@ -23,16 +23,26 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - Añadir `uid` a un datasource que ya existe falla (`data source not found`); habría que borrarlo y recrearlo. Por eso se usan variables.
 - Tras una sincronización fallida puede hacer falta un pull completo: `POST .../repositories/<nombre>/jobs` con `{"action":"pull","pull":{"incremental":false}}`.
 - La API de provisioning en 13.x prefiere `v0alpha1`; el Job la detecta solo.
+- En las llamadas a la API, manda siempre `X-Grafana-Org-Id`: sin ella, Grafana usa la org "actual" del usuario, que cambia cuando alguien cambia de org en el navegador.
+- El acceso de un token fine-grained va ligado al repo concreto: si el repo se borra y se recrea con el mismo nombre, hay que volver a darle acceso.
+- `GF_SECURITY_ADMIN_PASSWORD` solo se aplica al crear la BD; después: `grafana cli admin reset-admin-password`.
+- En POSIX sh (dash), `echo` interpreta las barras invertidas y rompe el JSON: usa `printf '%s\n'`. Las comillas dentro de líneas de log enviadas a Loki deben ir escapadas.
+- En los `sum by (<etiqueta>)` de LogQL, filtra `<etiqueta>!=""` para que no salgan series sin nombre.
 
 ## Cómo trabajar aquí
 
 - Tras cualquier cambio en `master/`, `tenants/*/custom/` o `scripts/`, ejecuta `scripts/render.sh --check` (necesita `yq` v4 de mikefarah en el PATH).
 - No edites `tenants/*/general/` ni `deploy/tenants.json` a mano: se generan.
-- Nunca subas secretos: el repo es público. El token va en una variable de entorno (`GITHUB_TOKEN`).
+- Nunca subas secretos ni nada de producción (nombres de clientes o productos, namespaces, hosts, repos internos): el repo es público. Antes de cada commit, sigue la skill `publicar-cambios`. El token va en `dev/.env` (ignorado por git).
 - Commits en español; termina el mensaje con la línea `Co-Authored-By` que indique el sistema.
 - Manual para usuarios: `docs/MANUAL.md`.
-- Skills (estándar Agent Skills, una sola copia): `.github/skills/`; `.claude/skills` es un enlace simbólico a esa carpeta.
-- Agentes: `.github/agents/*.agent.md` (Copilot) y `.claude/agents/*.md` (Claude Code). Mismo contenido con distinta cabecera: si cambias uno, cambia el otro.
+- Skills (estándar Agent Skills, una sola copia en `.github/skills/`; `.claude/skills` es un enlace simbólico):
+  - `probar-en-local`: levantar y depurar `dev/`, también en otra máquina o desde el móvil.
+  - `nuevo-panel`: añadir o convertir un panel.
+  - `panel-con-datos`: paneles con datos realistas (LogQL y PromQL) y su verificación.
+  - `nuevo-cliente`: clientes y selección de carpetas.
+  - `publicar-cambios`: lista de comprobación antes de commit y push (repo público) y verificación posterior.
+- Agentes `gitsync-repo-expert`, `revisor-paneles` y `disenador-paneles`, en `.github/agents/*.agent.md` (Copilot) y `.claude/agents/*.md` (Claude Code). Mismo cuerpo con distinta cabecera: si cambias uno, cambia el otro.
 - Contexto: este `AGENTS.md` es la fuente; `CLAUDE.md` lo importa y `.github/copilot-instructions.md` resume las reglas para Copilot (chat y code review).
 
 ## Contexto

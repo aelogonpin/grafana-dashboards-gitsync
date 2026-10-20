@@ -54,9 +54,12 @@ Grafana necesita un token para leer el repo y proponer cambios por PR.
 4. Guárdalo en `dev/.env`. Ese fichero está en `.gitignore` y nunca se sube:
 
 ```bash
-echo 'GITHUB_TOKEN=pega_aqui_tu_token' > dev/.env
+cp dev/.env.example dev/.env
+nano dev/.env                       # pega el token en GITHUB_TOKEN=
 git check-ignore dev/.env && echo "bien: no se subirá a GitHub"
 ```
+
+En `dev/.env` también puedes cambiar el puerto (`GRAFANA_PORT`), la contraseña de admin (`GRAFANA_ADMIN_PASSWORD`) y la URL (`GRAFANA_ROOT_URL`). Ver el paso 5 bis.
 
 **No pegues el token en ningún otro sitio**: ni en el chat, ni en un fichero del repo.
 
@@ -100,6 +103,18 @@ dev/check-isolation.sh    # qué datos ve cada cliente
 
 Si los dashboards tardan, espera un minuto y repite `dev/status.sh`.
 
+## Paso 5 bis. Verlo desde el móvil u otro ordenador
+
+1. Averigua la IP de tu máquina: `ip -4 -o addr show scope global | awk '{print $2, $4}'`. Usa la de tu red (wifi o cable, suele ser `192.168.x.x`) o la de tu VPN si el móvil está conectado a ella. Las de `docker0`, `br-*` o `virbr*` no sirven.
+2. En el móvil, abre `http://<esa-IP>:3001`. Si no carga, abre el puerto en el cortafuegos: `sudo ufw allow 3001/tcp`.
+3. Pon esa URL en `dev/.env` (`GRAFANA_ROOT_URL=http://<esa-IP>:3001/`) y aplica: `docker compose -f dev/docker-compose.yml up -d grafana`.
+4. **Ojo**: con `admin`/`admin`, cualquiera de tu red puede entrar. Si no es tu red de casa, cámbiala:
+   ```bash
+   docker compose -f dev/docker-compose.yml exec grafana grafana cli admin reset-admin-password 'otra-contraseña'
+   ```
+   y pon la misma en `GRAFANA_ADMIN_PASSWORD` dentro de `dev/.env`.
+5. En el móvil, el selector de organización está dentro del menú ☰.
+
 ## Paso 6. Tu primer panel: el POC
 
 Vas a subir un panel nuevo, "POC - Tienda en vivo", y hacer que solo lo vea `cliente-a`.
@@ -134,7 +149,8 @@ echo '{"apiVersion":"folder.grafana.app/v1beta1","kind":"Folder","metadata":{"na
 **6.5. Comprobar** antes de subir:
 
 ```bash
-scripts/render.sh --check     # debe terminar en OK
+scripts/render.sh --check                              # debe terminar en OK
+dev/check-queries.sh master/general/poc/tienda.json 1  # cada consulta del panel debe dar OK
 ```
 
 **6.6. Subirlo**:
@@ -180,7 +196,9 @@ Si haces `down -v`, al volver a levantar con `up -d` el Job crea otra vez las co
 | `git push` rechazado (`fetch first`) | el robot hizo un commit después del tuyo | `git pull --rebase` y otra vez `git push` |
 | La Action sale en rojo | el config o el panel tienen un error | `gh run view --log-failed`; el mensaje dice qué fichero y qué corregir |
 | Grafana sin dashboards tras 2 minutos | la conexión está bien pero no se sincronizó todo | `docker compose -f dev/docker-compose.yml run --rm --no-deps gitsync-init` y luego `dev/status.sh` |
-| Paneles vacíos | aún no hay datos | espera 1–2 minutos tras arrancar |
+| Paneles vacíos | aún no hay datos | espera 1–2 minutos tras arrancar; `dev/check-queries.sh <panel.json> <org>` dice qué consulta falla |
+| El móvil no carga Grafana | IP equivocada o cortafuegos | Paso 5 bis |
+| `port is already allocated` | el puerto 3001 está ocupado | `GRAFANA_PORT=3002` en `dev/.env` |
 
 ## Siguientes pasos
 

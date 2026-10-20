@@ -122,16 +122,17 @@ Grafana 13.2.4 multi-org con un stack de datos real en pequeño, parecido a prod
 |---|---|
 | `mimir` | Mimir 2.17 multi-tenant: un tenant por cliente |
 | `prometheus` + `node-exporter` | mide el host y escribe en Mimir una vez por cliente, con la etiqueta `cliente=<nombre>` |
-| `loki` + `log-generator` | Loki 3.5 multi-tenant; logs de una "tienda" (pedidos, avisos y errores) por cliente |
+| `loki` + `log-generator` | Loki 3.5 multi-tenant; logs realistas de una tienda online por cliente (pedidos con importe, método de pago, canal y región; carritos abandonados; pagos rechazados con motivo; latencias; stock) |
 | `orgs-init` | crea las orgs y sus datasources `Mimir-<cliente>` / `Loki-<cliente>` con la cabecera `X-Scope-OrgID` de su cliente |
 | `gitsync-init` | el mismo script que el Job de Kubernetes |
 
 ```bash
 scripts/render.sh                                            # genera deploy/tenants.json
-export GITHUB_TOKEN=...                                       # token con acceso al repo
+cp dev/.env.example dev/.env                                   # y pon tu token en GITHUB_TOKEN
 docker compose -f dev/docker-compose.yml up -d                # Grafana en http://localhost:3001 (admin/admin)
 docker compose -f dev/docker-compose.yml logs -f gitsync-init # resultado del Job
 dev/check-isolation.sh                                        # qué cliente ve cada org
+dev/check-queries.sh <panel.json> [org]                       # ejecuta las consultas de un panel
 docker compose -f dev/docker-compose.yml down -v              # borrar todo
 ```
 

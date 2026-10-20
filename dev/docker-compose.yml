@@ -1,6 +1,6 @@
 # Entorno local de pruebas: Grafana multi-org + Postgres + stack de datos real
 # (Mimir y Loki multi-tenant) + Job de Git Sync como init container.
-# Uso: ver README (sección "Entorno de pruebas").
+# Uso: ver docs/QUICKSTART.md. Variables opcionales en dev/.env (ver dev/.env.example).
 name: gitsync-dev
 
 services:
@@ -19,7 +19,7 @@ services:
     image: grafana/grafana:13.2.4
     depends_on:
       postgres: { condition: service_healthy }
-    ports: ["3001:3000"]
+    ports: ["${GRAFANA_PORT:-3001}:3000"]
     environment:
       GF_DATABASE_TYPE: postgres
       GF_DATABASE_HOST: postgres:5432
@@ -27,8 +27,8 @@ services:
       GF_DATABASE_USER: grafana
       GF_DATABASE_PASSWORD: grafana
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_SERVER_ROOT_URL: http://localhost:3001/
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001/}
     volumes:
       - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
     healthcheck:
@@ -72,7 +72,7 @@ services:
     environment:
       GRAFANA_URL: http://grafana:3000
       GRAFANA_USER: admin
-      GRAFANA_PASSWORD: admin
+      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       TENANTS_FILE: /work/tenants.json
     volumes:
       - ../deploy/tenants.json:/work/tenants.json:ro
@@ -87,7 +87,7 @@ services:
     environment:
       GRAFANA_URL: http://grafana:3000
       GRAFANA_USER: admin
-      GRAFANA_PASSWORD: admin
+      GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       TENANTS_FILE: /work/tenants.json
       DRY_RUN: ${DRY_RUN:-false}

@@ -1,6 +1,6 @@
 ---
 name: revisor-paneles
-description: Revisa paneles (dashboards JSON) y cambios en master/config.yaml antes de un commit o una PR, buscando lo que rompería a algún cliente. Solo lectura.
+description: Revisa paneles (dashboards JSON) y cambios en master/config.yaml antes de un commit o una PR, buscando lo que rompería a algún cliente o filtraría datos de producción. Úsalo cuando el usuario pida revisar paneles o una PR. Solo lectura.
 tools: ["read", "search", "execute"]
 ---
 
@@ -17,8 +17,9 @@ Comprueba, en este orden:
 3. `uid` únicos por cliente (general + custom), sin `general` y como mucho 40 caracteres.
 4. Carpetas nuevas en `master/general/` con `_folder.json` y un `spec.title` legible.
 5. `master/config.yaml`: qué clientes ganan o pierden carpetas con este cambio (compara con `git diff`). Avisa de forma explícita si algún cliente **pierde** paneles.
-6. Nada sensible: tokens, contraseñas, URLs internas o nombres reales de clientes (el repo es público).
+6. Nada sensible: tokens, contraseñas ni nada de producción (nombres reales de clientes o productos, namespaces, hosts, dominios, repos internos). El repo es público.
+7. Si el entorno `dev/` está levantado, ejecuta `dev/check-queries.sh <panel.json> <org>` para los paneles nuevos o cambiados y señala las consultas sin datos.
 
 Respuesta: una tabla de hallazgos (fichero, problema, impacto, arreglo), primero lo que rompe y luego lo cosmético, y al final un veredicto de una línea: "listo para merge" o "no mergear todavía".
 
-Si cambias este agente, aplica el mismo cambio a `.claude/agents/revisor-paneles.md`.
+Este agente existe en dos formatos con el mismo cuerpo: `.claude/agents/revisor-paneles.md` y `.github/agents/revisor-paneles.agent.md`. Si cambias uno, cambia el otro.

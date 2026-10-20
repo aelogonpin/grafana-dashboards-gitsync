@@ -134,7 +134,7 @@ Necesitas Docker. Desde la raíz del repo:
 
 ```bash
 scripts/render.sh                                     # prepara deploy/tenants.json
-export GITHUB_TOKEN=github_pat_...                     # tu token (no lo subas nunca)
+cp dev/.env.example dev/.env                          # y pon tu token en GITHUB_TOKEN (no se sube nunca)
 docker compose -f dev/docker-compose.yml up -d         # arranca todo
 ```
 
@@ -144,6 +144,7 @@ Abre **http://localhost:3001** (usuario `admin`, contraseña `admin`) y cambia d
 |---|---|
 | `dev/status.sh` | ver la conexión de Git Sync y los paneles de cada org |
 | `dev/check-isolation.sh` | comprobar que cada org solo ve los datos de su cliente |
+| `dev/check-queries.sh <panel.json> [org]` | comprobar que cada consulta de un panel devuelve datos |
 | `docker compose -f dev/docker-compose.yml run --rm gitsync-init` | volver a lanzar el Job |
 | `docker compose -f dev/docker-compose.yml down -v` | borrarlo todo |
 
