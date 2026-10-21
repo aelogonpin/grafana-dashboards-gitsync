@@ -19,7 +19,7 @@ description: Diseñar y construir paneles de Grafana con información realista (
 
 Valores: `metodo` ∈ tarjeta/bizum/paypal/transferencia; `canal` ∈ web/app/tienda; `region` ∈ norte/sur/este/oeste/centro; `motivo` ∈ fondos_insuficientes/tarjeta_caducada/fraude/timeout_pasarela. Volumen por ciclo de 2 s: cliente-a 1, cliente-b 2, cliente-c 3.
 
-**Métricas (Mimir)**: node-exporter (`node_cpu_seconds_total`, `node_memory_*`, `node_network_*`), Prometheus y Mimir (`up`, `prometheus_http_requests_total`, `process_resident_memory_bytes`…), todas con la etiqueta `cliente`.
+**Métricas (Mimir)**: node-exporter (`node_cpu_seconds_total`, `node_memory_*`, `node_network_*`, `node_uname_info`…), Prometheus y Mimir (`up`, `prometheus_http_requests_total`, `process_resident_memory_bytes`…), todas con las etiquetas `cliente` y `cluster="dev"`. Variables típicas de paneles de nodos: `cluster` → `label_values(cluster)`, `host` → `label_values(node_uname_info{cluster="$cluster"}, nodename)`, `instance` → `node-exporter:9100`.
 
 ## Patrones de consulta
 
@@ -54,6 +54,7 @@ dev/check-queries.sh <panel.json> <org> [now-1h]   # todas las filas en OK y con
 scripts/render.sh --check
 ```
 
+- Las consultas con variables del panel salen como `VAR`: sustituye a mano los valores (`cluster=dev`, `instance=node-exporter:9100`) para probarlas, o revísalas en Grafana.
 - Comprueba que las cifras son verosímiles (ticket medio entre 5 y 250 €, % de rechazo ~10–15 %, p95 de checkout cientos de ms) y que ninguna serie sale sin nombre.
 - Si es un panel general, pruébalo en dos orgs: mismo JSON y datos distintos por cliente.
 - Para subirlo, sigue la skill `publicar-cambios`.

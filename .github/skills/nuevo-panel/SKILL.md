@@ -22,12 +22,14 @@ Si viene de un export de Grafana, conviértelo siempre (cambia los datasources p
 scripts/convert-dashboard.sh <export.json> <uid> <destino.json> ["<título de la carpeta>"]
 ```
 
-El 4.º dato es opcional: si la carpeta destino es nueva, úsalo para darle el título visible en Grafana (llama a `scripts/folder-title.sh`).
+El 4.º dato es opcional y pone título a la **carpeta** destino, no al panel (el título del panel es el `title` del JSON). Úsalo **solo si la carpeta es nueva**: en una carpeta existente (p. ej. `kubernetes`) renombraría la carpeta para todos los clientes. Los scripts admiten rutas relativas al directorio actual (también `../master/...` desde `scripts/`).
 
 Elegir el `uid`:
 - Único dentro de cada cliente que lo vaya a recibir (general + custom). Comprueba con `grep -r '"uid": "<uid>"' master tenants`.
 - Máximo 40 caracteres: letras, números, `-` y `_`. Nunca `general`.
 - Convención: `gen-<tema>` para generales y `<cliente>-<tema>` para custom.
+
+Si el panel viene de producción, revisa los **valores guardados de sus variables** (`templating.list[].current`): pueden llevar nombres de clúster, nodos o IPs internas. El repo es público: avisa al usuario antes de subirlo y ofrece vaciarlos.
 
 Si `convert-dashboard.sh` avisa de datasources con UID fijo de otros tipos, pregunta al usuario si añadir una variable para ese tipo (mismo patrón: `type: datasource`, `query: <tipo>`, `regex: /^<Prefijo>/`, `hide: 2`).
 

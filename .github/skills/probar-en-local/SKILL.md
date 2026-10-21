@@ -9,7 +9,7 @@ Todo desde la raíz del repo. Por defecto, Grafana está en http://localhost:300
 
 ## Levantarlo en una máquina nueva
 
-1. Herramientas: Docker con `docker compose`, git, gh, jq y **yq v4 de mikefarah** (no el yq de Python). Si falta yq:
+1. Herramientas: Docker con `docker compose`, git, gh, jq y **yq v4 de mikefarah**. Ubuntu trae en `/usr/bin/yq` otro yq (el de Python, `yq --version` dice `0.0.0`) que **no sirve**; `render.sh` lo detecta y lo avisa. Instala el bueno en `~/.local/bin`, que va antes en el PATH:
    ```bash
    mkdir -p ~/.local/bin && curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && chmod +x ~/.local/bin/yq
    export PATH="$HOME/.local/bin:$PATH"
@@ -22,7 +22,7 @@ Todo desde la raíz del repo. Por defecto, Grafana está en http://localhost:300
    docker compose -f dev/docker-compose.yml up -d
    docker compose -f dev/docker-compose.yml logs gitsync-init | grep gitsync
    ```
-   La primera vez descarga ~2 GB de imágenes. Orden: postgres → grafana → `orgs-init` (orgs 2..N y datasources `Mimir-<cliente>`/`Loki-<cliente>` con `X-Scope-OrgID`) → `gitsync-init` (el Job). Mimir, Loki, Prometheus, node-exporter y log-generator generan datos por cliente.
+   La primera vez descarga ~2 GB de imágenes. Orden: postgres → grafana → `orgs-init` (orgs 2..N y datasources `Mimir-<cliente>`/`Loki-<cliente>` con `X-Scope-OrgID`) → `gitsync-init` (el Job). Mimir, Loki, Prometheus, node-exporter y log-generator generan datos por cliente. Todas las métricas llevan `cluster="dev"` (en `dev/stack/prometheus.yml`), para que funcionen los paneles que filtran por `$cluster`.
 
 Variables de `dev/.env` (todas opcionales salvo el token):
 
@@ -54,7 +54,7 @@ Si cambias el puerto o la contraseña, los scripts de `dev/` necesitan `GRAFANA=
 |---|---|
 | `dev/status.sh [orgs]` | estado de Git Sync (healthy/sync) y los paneles de cada org |
 | `dev/check-isolation.sh [orgs]` | qué cliente ve cada org en Mimir y Loki (debe ser solo el suyo) |
-| `dev/check-queries.sh <panel.json> [org] [rango]` | ejecuta cada consulta del panel en esa org y enseña el último valor; sale con 1 si alguna no tiene datos |
+| `dev/check-queries.sh <panel.json> [org] [rango]` | ejecuta cada consulta del panel en esa org y enseña el último valor; sale con 1 si alguna no tiene datos. Las que usan variables del panel (`$cluster`, `$host`…) salen como `VAR`: revísalas en Grafana |
 | `docker compose -f dev/docker-compose.yml run --rm --no-deps gitsync-init` | relanza el Job (idempotente; lee el token de `dev/.env`) |
 | `DRY_RUN=true docker compose -f dev/docker-compose.yml run --rm --no-deps gitsync-init` | qué haría el Job sin tocar nada |
 
@@ -72,6 +72,8 @@ Las llamadas a la API llevan siempre `-H "X-Grafana-Org-Id: <org>"`: sin esa cab
 | panel vacío | la org no tiene datasource cuyo nombre empiece por `Mimir`/`Loki`, o aún no hay datos | renombrarlo / esperar 1–2 min |
 | Loki no recibe logs del generador | JSON mal formado (comillas sin escapar en la línea) | `dev/stack/log-generator.sh` escapa `"`; prueba un push a mano con `curl -w '%{http_code}'` (204 = bien) |
 | puerto 3001 ocupado | otro entorno levantado | `GRAFANA_PORT` en `dev/.env`, o `down` del otro |
+| `render.sh`: `'tenants' no existe o no es un mapa` o aviso de yq | se está usando el yq de Python | instalar el de mikefarah en `~/.local/bin` (paso 1) y `hash -r` |
+| panel importado de producción vacío en pruebas | sus variables guardan valores de producción (clúster, nodo, IP) | elegir `cluster = dev` en el desplegable; Grafana recalcula el resto |
 
 Detalle de una sincronización: `curl -s -u admin:admin localhost:3001/apis/provisioning.grafana.app/v0alpha1/namespaces/<ns>/repositories/gitsync-<cliente> | jq .status`.
 

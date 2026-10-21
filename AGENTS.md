@@ -29,6 +29,12 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - `GF_SECURITY_ADMIN_PASSWORD` solo se aplica al crear la BD; después: `grafana cli admin reset-admin-password`.
 - En POSIX sh (dash), `echo` interpreta las barras invertidas y rompe el JSON: usa `printf '%s\n'`. Las comillas dentro de líneas de log enviadas a Loki deben ir escapadas.
 - En los `sum by (<etiqueta>)` de LogQL, filtra `<etiqueta>!=""` para que no salgan series sin nombre.
+- Hay dos programas llamados `yq`: el de Python (Ubuntu, `/usr/bin/yq`, versión `0.0.0`) no sirve; hace falta el de mikefarah v4 (en `~/.local/bin`). `render.sh` lo detecta.
+- En `dev/` todas las métricas llevan `cluster="dev"`: los paneles importados que filtran por `$cluster` funcionan eligiendo ese valor.
+- `dev/check-queries.sh` marca como `VAR` las consultas que usan variables del panel (no puede resolverlas): hay que revisarlas en Grafana o sustituir los valores a mano.
+- El 4.º dato de `convert-dashboard.sh` titula la **carpeta** destino, no el panel: solo para carpetas nuevas. En una existente renombraría la carpeta para todos los clientes.
+- Los paneles exportados de producción guardan los **valores actuales de sus variables** (`templating.list[].current`): clúster, nodos, IPs. Revísalos antes de subir.
+- Las comprobaciones previas a un push deben **parar** si encuentran algo; nunca `git add -A` a ciegas ni subir ficheros que no has creado sin preguntar.
 
 ## Cómo trabajar aquí
 
@@ -36,7 +42,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - No edites `tenants/*/general/` ni `deploy/tenants.json` a mano: se generan.
 - Nunca subas secretos ni nada de producción (nombres de clientes o productos, namespaces, hosts, repos internos): el repo es público. Antes de cada commit, sigue la skill `publicar-cambios`. El token va en `dev/.env` (ignorado por git).
 - Commits en español; termina el mensaje con la línea `Co-Authored-By` que indique el sistema.
-- Manual para usuarios: `docs/MANUAL.md`.
+- Manual para usuarios: `docs/MANUAL.md`; arranque desde cero: `docs/QUICKSTART.md`; historial de cambios: `CHANGELOG.md` (añade una entrada por cada cambio que afecte al uso).
 - Skills (estándar Agent Skills, una sola copia en `.github/skills/`; `.claude/skills` es un enlace simbólico):
   - `probar-en-local`: levantar y depurar `dev/`, también en otra máquina o desde el móvil.
   - `nuevo-panel`: añadir o convertir un panel.

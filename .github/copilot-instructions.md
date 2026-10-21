@@ -14,4 +14,6 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 
 ## Antes de proponer un cambio
 
+Las comprobaciones deben **parar** si encuentran algo, y no se suben ficheros añadidos por otra persona sin preguntar. Añade una entrada en `CHANGELOG.md` si el cambio afecta al uso.
+
 Ejecuta `scripts/render.sh --check` y, si tocas un panel y el entorno `dev/` está levantado, `dev/check-queries.sh <panel.json> <org>`. Si cambia el comportamiento, actualiza `README.md`, `docs/MANUAL.md`, `docs/QUICKSTART.md` y `AGENTS.md`.
