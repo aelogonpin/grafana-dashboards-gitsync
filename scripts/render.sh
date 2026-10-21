@@ -25,6 +25,17 @@ info() { echo "  $*"; }
 for bin in yq jq rsync; do
   command -v "$bin" >/dev/null || { echo "Falta '$bin' en el PATH" >&2; exit 2; }
 done
+# Hay dos programas llamados yq; este script necesita el de mikefarah (v4), no el de Python.
+if ! yq --version 2>&1 | grep -q 'mikefarah'; then
+  cat >&2 <<EOF
+El 'yq' del PATH ($(command -v yq): $(yq --version 2>&1 | head -1)) no es el de mikefarah v4.
+Instálalo en ~/.local/bin (va antes que /usr/bin en el PATH):
+  mkdir -p ~/.local/bin
+  curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+  chmod +x ~/.local/bin/yq && hash -r && yq --version
+EOF
+  exit 2
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Validar el config
