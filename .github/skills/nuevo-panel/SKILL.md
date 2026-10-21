@@ -19,8 +19,10 @@ Nunca escribas en `tenants/*/general/`: lo genera `scripts/render.sh` y la PR fa
 Si viene de un export de Grafana, conviértelo siempre (cambia los datasources por `${ds_mimir}` / `${ds_loki}`, añade las variables con regex, quita `id` y `__inputs`, y fija el uid):
 
 ```bash
-scripts/convert-dashboard.sh <export.json> <uid> <destino.json>
+scripts/convert-dashboard.sh <export.json> <uid> <destino.json> ["<título de la carpeta>"]
 ```
+
+El 4.º dato es opcional: si la carpeta destino es nueva, úsalo para darle el título visible en Grafana (llama a `scripts/folder-title.sh`).
 
 Elegir el `uid`:
 - Único dentro de cada cliente que lo vaya a recibir (general + custom). Comprueba con `grep -r '"uid": "<uid>"' master tenants`.

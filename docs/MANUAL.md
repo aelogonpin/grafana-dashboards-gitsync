@@ -71,12 +71,13 @@ cliente-c:
 2. *Dashboard → Export → Export as JSON* y descárgalo.
 3. Conviértelo con el script, que hace todo el trabajo sucio por ti (cambia los datasources por `${ds_mimir}` / `${ds_loki}`, añade las variables y le pone el `uid`):
    ```bash
-   scripts/convert-dashboard.sh ~/Descargas/mi-panel.json gen-mi-panel master/general/kubernetes/mi-panel.json
+   scripts/convert-dashboard.sh ~/Descargas/mi-panel.json gen-mi-panel master/general/kubernetes/mi-panel.json "Kubernetes"
    ```
-   Los 3 datos, en este orden:
+   Los datos, en este orden:
    - **1º** `~/Descargas/mi-panel.json`: el fichero que exportaste.
    - **2º** `gen-mi-panel`: el `uid`, el "DNI" del panel, inventado por ti. Minúsculas, números y guiones, máximo 40 caracteres, distinto de `general` y que no lo tenga ningún otro panel (compruébalo con `grep -rl '"uid": "gen-mi-panel"' master tenants`).
    - **3º** `master/general/kubernetes/mi-panel.json`: dónde se guarda. En `master/general/<carpeta>/` es para todos los clientes que tengan esa carpeta en el config; en `tenants/<cliente>/custom/`, solo para ese cliente.
+   - **4º (opcional)** `"Kubernetes"`: el título de la carpeta en Grafana. Si no lo pones, se ve el nombre del directorio.
 
    Explicación más detallada: [quick start, paso 6.2](QUICKSTART.md).
 4. Prueba en tu máquina: `scripts/render.sh --check`. Si dice `OK`, haz push.
@@ -110,7 +111,7 @@ También se puede crear desde Grafana: guardas el panel en la carpeta "Paneles p
 
 ### Receta 7: título de una carpeta en Grafana
 
-Por defecto, cada carpeta se muestra con el nombre de su directorio. Para mostrar otro título:
+Por defecto, cada carpeta se muestra con el nombre de su directorio. Al convertir un panel puedes darle título con el 4.º dato de `convert-dashboard.sh`. Para ponerlo o cambiarlo en cualquier momento:
 
 ```bash
 scripts/folder-title.sh master/general/kubernetes "Kubernetes"          # carpeta general

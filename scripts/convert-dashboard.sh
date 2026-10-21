@@ -4,13 +4,14 @@
 #   - añade las variables ocultas ds_mimir / ds_loki (regex /^Mimir/, /^Loki/)
 #   - quita id, __inputs, __requires y __elements del export
 #   - fija el uid del dashboard
+#   - opcional: define el título de la carpeta destino en Grafana (scripts/folder-title.sh)
 #
-# Uso: scripts/convert-dashboard.sh <export.json> <uid> <destino.json>
-# Ej.: scripts/convert-dashboard.sh ~/Descargas/cpu.json gen-cpu master/general/kubernetes/cpu.json
+# Uso: scripts/convert-dashboard.sh <export.json> <uid> <destino.json> ["Título de la carpeta"]
+# Ej.: scripts/convert-dashboard.sh ~/Descargas/cpu.json gen-cpu master/general/kubernetes/cpu.json "Kubernetes"
 set -euo pipefail
 
-[[ $# -eq 3 ]] || { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
-src=$1 uid=$2 dst=$3
+[[ $# -eq 3 || $# -eq 4 ]] || { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+src=$1 uid=$2 dst=$3 folder_title=${4:-}
 [[ "$uid" =~ ^[A-Za-z0-9_-]{1,40}$ && "$uid" != "general" ]] || { echo "uid no válido: '$uid'" >&2; exit 1; }
 jq empty "$src" || { echo "$src no es un JSON válido" >&2; exit 1; }
 
@@ -39,3 +40,7 @@ left=$(jq -r '[.. | objects | select(has("datasource")) | .datasource | objects 
                | select(type == "string" and (startswith("$") | not))
                | select(IN("grafana", "-- Grafana --", "-- Mixed --", "-- Dashboard --") | not)] | unique | join(", ")' "$dst")
 [[ -z "$left" ]] || echo "AVISO: quedan datasources con UID fijo (tipos que no son prometheus/loki): $left"
+
+if [[ -n "$folder_title" ]]; then
+  "$(dirname "${BASH_SOURCE[0]}")/folder-title.sh" "$(dirname "$dst")" "$folder_title"
+fi

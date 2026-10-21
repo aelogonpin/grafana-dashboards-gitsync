@@ -121,24 +121,24 @@ Vas a subir un panel nuevo, "POC - Tienda en vivo", y hacer que solo lo vea `cli
 
 **6.1. El panel.** Usa `docs/ejemplos/poc-tienda.json`. Es un export de Grafana tal cual, con los datasources de una org concreta. Si te lo has descargado, usa tu fichero.
 
-**6.2. Convertirlo al formato del repo.**
+**6.2. Convertirlo al formato del repo y ponerle título a su carpeta.**
 
 Un panel exportado de Grafana viene "atado" a la org donde lo hiciste: dentro lleva el identificador de *sus* datasources (por ejemplo, el Mimir de cliente-a). Si lo subieras tal cual, en las demás orgs saldría vacío. El script lo "desata":
 
 - Cambia cada datasource por una variable que, en cada org, busca su propio Mimir o Loki.
 - Le pone el identificador (`uid`) que tú elijas.
-- Lo guarda donde le digas.
+- Lo guarda donde le digas y, si se lo pides, define el título de la carpeta en Grafana.
 
-El comando tiene **3 datos**, siempre en este orden:
+El comando tiene **3 datos obligatorios y 1 opcional**, siempre en este orden:
 
 ```bash
-scripts/convert-dashboard.sh  <1: fichero exportado>  <2: uid nuevo>  <3: dónde guardarlo>
+scripts/convert-dashboard.sh  <1: fichero exportado>  <2: uid nuevo>  <3: dónde guardarlo>  ["4: título de la carpeta"]
 ```
 
 Para el POC:
 
 ```bash
-scripts/convert-dashboard.sh docs/ejemplos/poc-tienda.json gen-poc-tienda master/general/poc/tienda.json
+scripts/convert-dashboard.sh docs/ejemplos/poc-tienda.json gen-poc-tienda master/general/poc/tienda.json "Prueba de concepto"
 ```
 
 | Nº | En el ejemplo | Qué es | Cómo elegirlo |
@@ -146,11 +146,13 @@ scripts/convert-dashboard.sh docs/ejemplos/poc-tienda.json gen-poc-tienda master
 | 1 | `docs/ejemplos/poc-tienda.json` | El **fichero que exportaste** de Grafana (*Export → Export as JSON*). No se modifica | La ruta a tu fichero. Si está en Descargas: `~/Descargas/poc-tienda.json` |
 | 2 | `gen-poc-tienda` | El **`uid`**: el "DNI" del panel. Grafana lo usa para la dirección web (`/d/gen-poc-tienda/...`) y para no confundirlo con otro | Un nombre corto inventado por ti: minúsculas, números y guiones, máximo 40 caracteres. Que **ningún otro panel** lo tenga y que no sea `general`. Costumbre: `gen-` delante si es para todos, `<cliente>-` si es de un cliente |
 | 3 | `master/general/poc/tienda.json` | **Dónde se guarda** el panel ya convertido, y por tanto quién lo recibe | `master/general/<carpeta>/<nombre>.json` → panel para todos (la `<carpeta>` es la que luego pones en el config). `tenants/<cliente>/custom/<nombre>.json` → solo para ese cliente. Si la carpeta no existe, se crea |
+| 4 | `"Prueba de concepto"` | **Opcional.** El **título de la carpeta** tal como se verá en Grafana | Entre comillas si lleva espacios. Si no lo pones, la carpeta se muestra con el nombre del directorio (`poc`). Se guarda en el `_folder.json` de la carpeta |
 
 Si sale bien, verás:
 
 ```
 Convertido: master/general/poc/tienda.json (uid gen-poc-tienda)
+Título de master/general/poc: "Prueba de concepto"
 ```
 
 Comprueba que el `uid` no lo usa nadie más (no debe salir ningún otro fichero):
@@ -159,20 +161,9 @@ Comprueba que el `uid` no lo usa nadie más (no debe salir ningún otro fichero)
 grep -rl '"uid": "gen-poc-tienda"' master tenants
 ```
 
-**6.3. Definir el título de la carpeta en Grafana** (opcional):
+Para cambiar más tarde el título de una carpeta sin volver a convertir nada: `scripts/folder-title.sh master/general/poc "Otro título"`.
 
-```bash
-scripts/folder-title.sh master/general/poc "Prueba de concepto"
-```
-
-| Nº | En el ejemplo | Qué es |
-|---|---|---|
-| 1 | `master/general/poc` | La carpeta del repo |
-| 2 | `"Prueba de concepto"` | El título con el que aparecerá en Grafana, entre comillas si lleva espacios |
-
-Si te saltas este paso, Grafana muestra la carpeta con el nombre del directorio (`poc`). El script guarda el título en `master/general/poc/_folder.json`, el fichero de metadatos de carpeta que pide Git Sync.
-
-**6.4. Dárselo solo a `cliente-a`**: abre `master/config.yaml` y añade `poc` a su lista `general`:
+**6.3. Dárselo solo a `cliente-a`**: abre `master/config.yaml` y añade `poc` a su lista `general`:
 
 ```yaml
   cliente-a:
@@ -184,14 +175,14 @@ Si te saltas este paso, Grafana muestra la carpeta con el nombre del directorio 
       - poc              # <- nuevo
 ```
 
-**6.5. Comprobar** antes de subir:
+**6.4. Comprobar** antes de subir:
 
 ```bash
 scripts/render.sh --check                              # debe terminar en OK
 dev/check-queries.sh master/general/poc/tienda.json 1  # cada consulta del panel debe dar OK
 ```
 
-**6.6. Subirlo**:
+**6.5. Subirlo**:
 
 ```bash
 git add master/
@@ -202,7 +193,7 @@ gh run watch                  # mira cómo trabaja el robot; debe acabar en verd
 
 El robot hace un commit "regenerar paneles de clientes desde master" que copia el panel a `tenants/cliente-a/general/poc/`.
 
-**6.7. Verlo en Grafana.** En 1 minuto como mucho (Git Sync revisa el repo cada 60 s):
+**6.6. Verlo en Grafana.** En 1 minuto como mucho (Git Sync revisa el repo cada 60 s):
 
 ```bash
 dev/status.sh 1 2
@@ -210,7 +201,7 @@ dev/status.sh 1 2
 
 `cliente-a` tiene ahora `POC / POC - Tienda en vivo`; `cliente-b`, no. En http://localhost:3001 (org `cliente-a`) abre el panel: pedidos, errores, CPU, memoria y logs en vivo.
 
-**6.8. Dárselo también a `cliente-b`**: añade `poc` a su lista en `master/config.yaml`, y luego `git pull`, commit y push (el `pull` trae antes el commit del robot). En un minuto también lo tiene, con **sus** datos.
+**6.7. Dárselo también a `cliente-b`**: añade `poc` a su lista en `master/config.yaml`, y luego `git pull`, commit y push (el `pull` trae antes el commit del robot). En un minuto también lo tiene, con **sus** datos.
 
 ## Paso 7. Apagar
 
