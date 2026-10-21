@@ -28,3 +28,4 @@ tenants:
     general:
       - aplicacion/metrics/api.json # también se puede elegir un fichero suelto
       - alertas
+      - kubernetes/monitoring-vm.json
