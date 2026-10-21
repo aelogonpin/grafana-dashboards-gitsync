@@ -1,0 +1,393 @@
+{
+  "uid": "cliente-b-tienda-trazas",
+  "title": "Cliente B - Tienda: trazas",
+  "description": "TraceQL metrics, búsquedas de trazas con error o lentas y detalle de una traza, desde Tempo",
+  "tags": [
+    "tienda",
+    "cliente-b",
+    "trazas"
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "links": [
+    {
+      "title": "Tienda",
+      "type": "dashboards",
+      "tags": [
+        "tienda"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "ds_mimir",
+        "label": "Mimir",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "/^Mimir/",
+        "hide": 2
+      },
+      {
+        "name": "ds_loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "regex": "/^Loki/",
+        "hide": 2
+      },
+      {
+        "name": "ds_tempo",
+        "label": "Tempo",
+        "type": "datasource",
+        "query": "tempo",
+        "regex": "/^Tempo/",
+        "hide": 2
+      },
+      {
+        "name": "cluster",
+        "label": "Origen",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${ds_mimir}"
+        },
+        "query": {
+          "query": "label_values(up{job=\"tienda\"}, cluster)",
+          "refId": "cluster"
+        },
+        "definition": "label_values(up{job=\"tienda\"}, cluster)",
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "name": "traza",
+        "label": "Traza",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Spans por segundo, por operación",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\"} | rate() by (name)",
+          "limit": 20,
+          "tableType": "traces",
+          "metricsQueryType": "range",
+          "step": "60s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 25,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Spans con error por segundo, por operación",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && status=error} | rate() by (name)",
+          "limit": 20,
+          "tableType": "traces",
+          "metricsQueryType": "range",
+          "step": "60s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 25,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "drawStyle": "bars"
+          },
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "Duración p95 de las peticiones, por ruta",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && kind=server} | quantile_over_time(duration, .95) by (span.http.route)",
+          "limit": 20,
+          "tableType": "traces",
+          "metricsQueryType": "range",
+          "step": "60s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "Duración p95 de las operaciones internas",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && kind=internal} | quantile_over_time(duration, .95) by (name)",
+          "limit": 20,
+          "tableType": "traces",
+          "metricsQueryType": "range",
+          "step": "60s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "id": 4,
+      "description": "Spans creados en la app: consulta de catálogo, búsqueda, autorización de pago y guardado del pedido"
+    },
+    {
+      "type": "table",
+      "title": "Trazas con error",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && status=error}",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "id": 5,
+      "description": "Pincha en el Trace ID para abrirla"
+    },
+    {
+      "type": "table",
+      "title": "Trazas lentas (> 500 ms)",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && kind=server && duration > 500ms}",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "id": 6
+    },
+    {
+      "type": "table",
+      "title": "Últimas trazas",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"tienda\" && resource.cluster=\"$cluster\" && kind=server}",
+          "limit": 30,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "id": 7
+    },
+    {
+      "type": "traces",
+      "title": "Traza seleccionada (variable «Traza»)",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${ds_tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${ds_tempo}"
+          },
+          "queryType": "traceId",
+          "query": "$traza"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "id": 8,
+      "description": "Pega un trace_id en la variable Traza o llega desde la tabla de pagos rechazados del panel de logs"
+    }
+  ]
+}
