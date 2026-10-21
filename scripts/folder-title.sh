@@ -12,8 +12,12 @@ set -euo pipefail
 
 [[ $# -eq 2 ]] || { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-dir="${1%/}" title="$2"
+title="$2"
 [[ -n "$title" ]] || { echo "El título no puede estar vacío" >&2; exit 1; }
+# Admite rutas relativas al directorio actual (p. ej. ../master/general/x desde scripts/) o absolutas.
+abs="$(realpath -m "$1")"
+[[ "$abs" == "$ROOT"/* ]] || { echo "La carpeta debe estar dentro del repo ($ROOT)" >&2; exit 1; }
+dir="${abs#"$ROOT"/}"
 
 case "$dir" in
   master/general/*) prefix=gen;    rel="${dir#master/general/}" ;;
