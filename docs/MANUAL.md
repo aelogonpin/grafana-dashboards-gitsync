@@ -73,7 +73,12 @@ cliente-c:
    ```bash
    scripts/convert-dashboard.sh ~/Descargas/mi-panel.json gen-mi-panel master/general/kubernetes/mi-panel.json
    ```
-   El `uid` (aquí `gen-mi-panel`) tiene que ser nuevo: que no lo tenga ningún otro panel.
+   Los 3 datos, en este orden:
+   - **1º** `~/Descargas/mi-panel.json`: el fichero que exportaste.
+   - **2º** `gen-mi-panel`: el `uid`, el "DNI" del panel, inventado por ti. Minúsculas, números y guiones, máximo 40 caracteres, distinto de `general` y que no lo tenga ningún otro panel (compruébalo con `grep -rl '"uid": "gen-mi-panel"' master tenants`).
+   - **3º** `master/general/kubernetes/mi-panel.json`: dónde se guarda. En `master/general/<carpeta>/` es para todos los clientes que tengan esa carpeta en el config; en `tenants/<cliente>/custom/`, solo para ese cliente.
+
+   Explicación más detallada: [quick start, paso 6.2](QUICKSTART.md).
 4. Prueba en tu máquina: `scripts/render.sh --check`. Si dice `OK`, haz push.
 
 Los clientes que tengan `kubernetes` en su config lo verán solos.

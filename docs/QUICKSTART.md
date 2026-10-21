@@ -121,10 +121,42 @@ Vas a subir un panel nuevo, "POC - Tienda en vivo", y hacer que solo lo vea `cli
 
 **6.1. El panel.** Usa `docs/ejemplos/poc-tienda.json`. Es un export de Grafana tal cual, con los datasources de una org concreta. Si te lo has descargado, usa tu fichero.
 
-**6.2. Convertirlo** al formato del repo (cambia los datasources por variables y le pone un `uid` fijo):
+**6.2. Convertirlo al formato del repo.**
+
+Un panel exportado de Grafana viene "atado" a la org donde lo hiciste: dentro lleva el identificador de *sus* datasources (por ejemplo, el Mimir de cliente-a). Si lo subieras tal cual, en las demás orgs saldría vacío. El script lo "desata":
+
+- Cambia cada datasource por una variable que, en cada org, busca su propio Mimir o Loki.
+- Le pone el identificador (`uid`) que tú elijas.
+- Lo guarda donde le digas.
+
+El comando tiene **3 datos**, siempre en este orden:
+
+```bash
+scripts/convert-dashboard.sh  <1: fichero exportado>  <2: uid nuevo>  <3: dónde guardarlo>
+```
+
+Para el POC:
 
 ```bash
 scripts/convert-dashboard.sh docs/ejemplos/poc-tienda.json gen-poc-tienda master/general/poc/tienda.json
+```
+
+| Nº | En el ejemplo | Qué es | Cómo elegirlo |
+|---|---|---|---|
+| 1 | `docs/ejemplos/poc-tienda.json` | El **fichero que exportaste** de Grafana (*Export → Export as JSON*). No se modifica | La ruta a tu fichero. Si está en Descargas: `~/Descargas/poc-tienda.json` |
+| 2 | `gen-poc-tienda` | El **`uid`**: el "DNI" del panel. Grafana lo usa para la dirección web (`/d/gen-poc-tienda/...`) y para no confundirlo con otro | Un nombre corto inventado por ti: minúsculas, números y guiones, máximo 40 caracteres. Que **ningún otro panel** lo tenga y que no sea `general`. Costumbre: `gen-` delante si es para todos, `<cliente>-` si es de un cliente |
+| 3 | `master/general/poc/tienda.json` | **Dónde se guarda** el panel ya convertido, y por tanto quién lo recibe | `master/general/<carpeta>/<nombre>.json` → panel para todos (la `<carpeta>` es la que luego pones en el config). `tenants/<cliente>/custom/<nombre>.json` → solo para ese cliente. Si la carpeta no existe, se crea |
+
+Si sale bien, verás:
+
+```
+Convertido: master/general/poc/tienda.json (uid gen-poc-tienda)
+```
+
+Comprueba que el `uid` no lo usa nadie más (no debe salir ningún otro fichero):
+
+```bash
+grep -rl '"uid": "gen-poc-tienda"' master tenants
 ```
 
 **6.3. Ponerle nombre bonito a la carpeta**:
