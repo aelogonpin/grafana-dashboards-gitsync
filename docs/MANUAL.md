@@ -108,15 +108,16 @@ También se puede crear desde Grafana: guardas el panel en la carpeta "Paneles p
 4. Cuando quieras que su Grafana lo lea, cambia a `gitSync: true` y haz push.
 5. El Job de Git Sync (en Kubernetes o en Docker) crea su conexión la próxima vez que se ejecute.
 
-### Receta 7: carpetas con nombre bonito
+### Receta 7: título de una carpeta en Grafana
 
-Los títulos de las carpetas salen de `_folder.json`. Para cambiar cómo se ve una carpeta de `master/general/`:
+Por defecto, cada carpeta se muestra con el nombre de su directorio. Para mostrar otro título:
 
-```json
-{"apiVersion":"folder.grafana.app/v1beta1","kind":"Folder","metadata":{"name":"titulo"},"spec":{"title":"Kubernetes"}}
+```bash
+scripts/folder-title.sh master/general/kubernetes "Kubernetes"          # carpeta general
+scripts/folder-title.sh tenants/cliente-a/custom/negocio "Negocio"      # carpeta propia de un cliente
 ```
 
-Solo importa `spec.title`. El UID lo pone el robot. Nunca uses `general` como UID: Grafana lo tiene reservado.
+El título se guarda en el `_folder.json` de la carpeta, que es el fichero de metadatos de Git Sync. En las carpetas generales, el identificador (UID) lo asigna el robot. En las propias se deriva de la ruta: no renombres después el directorio, porque Grafana identifica la carpeta por ese UID.
 
 ---
 

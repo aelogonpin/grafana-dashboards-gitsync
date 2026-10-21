@@ -21,6 +21,8 @@ tenants/<cliente>/
   general/                    GENERADO por GitHub Actions: no se edita a mano
   custom/                     paneles propios del cliente
 scripts/render.sh             lógica de carpetas (bash + yq + jq + rsync, sin IA)
+scripts/convert-dashboard.sh  convierte un export de Grafana al formato del repo
+scripts/folder-title.sh       define el título de una carpeta en Grafana
 deploy/
   tenants.json                GENERADO: lo lee el Job de Git Sync
   gitsync/gitsync-sync.sh     Job idempotente de Git Sync (sh + curl + jq)

@@ -31,10 +31,10 @@ Si `convert-dashboard.sh` avisa de datasources con UID fijo de otros tipos, preg
 
 ## 3. Carpeta nueva en master
 
-Si creas una carpeta nueva en `master/general/`, añade su `_folder.json` con el título visible (el UID lo reescribe render.sh):
+Si creas una carpeta nueva, define su título visible en Grafana (escribe su `_folder.json`; en `master/` el UID lo reasigna render.sh y en `custom/` se deriva de la ruta):
 
-```json
-{"apiVersion":"folder.grafana.app/v1beta1","kind":"Folder","metadata":{"name":"titulo"},"spec":{"title":"<Título bonito>"}}
+```bash
+scripts/folder-title.sh <carpeta> "<Título>"
 ```
 
 Y, si toca, añade la carpeta a los clientes en `master/config.yaml` (ver la skill `nuevo-cliente`).

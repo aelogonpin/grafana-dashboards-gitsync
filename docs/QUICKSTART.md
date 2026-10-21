@@ -159,12 +159,18 @@ Comprueba que el `uid` no lo usa nadie más (no debe salir ningún otro fichero)
 grep -rl '"uid": "gen-poc-tienda"' master tenants
 ```
 
-**6.3. Ponerle nombre bonito a la carpeta**:
+**6.3. Definir el título de la carpeta en Grafana** (opcional):
 
 ```bash
-echo '{"apiVersion":"folder.grafana.app/v1beta1","kind":"Folder","metadata":{"name":"titulo"},"spec":{"title":"POC"}}' \
-  > master/general/poc/_folder.json
+scripts/folder-title.sh master/general/poc "Prueba de concepto"
 ```
+
+| Nº | En el ejemplo | Qué es |
+|---|---|---|
+| 1 | `master/general/poc` | La carpeta del repo |
+| 2 | `"Prueba de concepto"` | El título con el que aparecerá en Grafana, entre comillas si lleva espacios |
+
+Si te saltas este paso, Grafana muestra la carpeta con el nombre del directorio (`poc`). El script guarda el título en `master/general/poc/_folder.json`, el fichero de metadatos de carpeta que pide Git Sync.
 
 **6.4. Dárselo solo a `cliente-a`**: abre `master/config.yaml` y añade `poc` a su lista `general`:
 
