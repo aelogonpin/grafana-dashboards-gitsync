@@ -8,6 +8,8 @@
 # Variables: GRAFANA (http://localhost:3001), AUTH (admin:admin)
 # Resuelve ${ds_mimir} / ${ds_loki} al datasource prometheus / loki de esa org.
 # Sale con código 1 si alguna consulta falla o no devuelve datos.
+# Las consultas con variables del panel ($cluster, $host...) no se pueden resolver aquí:
+# se marcan con VAR y hay que revisarlas en Grafana.
 set -eu
 [ $# -ge 1 ] || { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 F=$1; ORG=${2:-1}; FROM=${3:-now-1h}
@@ -29,6 +31,11 @@ echo "$(jq -r .title "$F") — org $ORG, desde $FROM"
 while IFS= read -r row; do
   title=$(j "$row" .t); typ=$(j "$row" .typ); expr=$(j "$row" .e)
   if [ "$(j "$row" .ds)" = loki ]; then uid=$LOKI; else uid=$PROM; fi
+  vars=$(printf '%s' "$expr" | grep -oE '\$\{?[A-Za-z_][A-Za-z0-9_]*' | grep -vE '__(interval|rate_interval|range|auto)' | tr -d '${' | sort -u | tr '\n' ' ')
+  if [ -n "$vars" ]; then
+    printf '%-3s %-44s %s\n' VAR "$title" "usa variables ($vars): revisar en Grafana"
+    continue
+  fi
   body=$(jq -n --arg u "$uid" --arg e "$expr" --arg from "$FROM" \
     '{from: $from, to: "now", queries: [{refId: "A", datasource: {uid: $u}, expr: $e, queryType: "range", maxLines: 3, step: "60s"}]}')
   r=$(curl -s -u "$AUTH" -H "X-Grafana-Org-Id: $ORG" -H 'Content-Type: application/json' -X POST "$G/api/ds/query" -d "$body")

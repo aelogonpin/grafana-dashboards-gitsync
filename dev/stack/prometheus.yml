@@ -1,7 +1,10 @@
 # Mide el host (node-exporter), a sí mismo y a Mimir, y escribe en un tenant de Mimir por cliente.
+# Todas las series llevan cluster=dev (external_labels).
 # Cada tenant recibe la etiqueta cliente=<nombre> para ver en los paneles de quién es el dato.
 global:
   scrape_interval: 15s
+  external_labels:
+    cluster: dev          # como en un clúster real: muchos paneles filtran por la etiqueta cluster
 scrape_configs:
   - job_name: node
     static_configs: [ { targets: ["node-exporter:9100"] } ]
