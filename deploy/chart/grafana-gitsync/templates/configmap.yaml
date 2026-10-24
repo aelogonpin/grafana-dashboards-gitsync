@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gitsync.name" . }}
+  labels:
+    {{- include "gitsync.labels" . | nindent 4 }}
+data:
+  gitsync-sync.sh: |
+{{ .Files.Get "files/gitsync-sync.sh" | indent 4 }}
+  # Lista de clientes para el modo "todos" (CronJob), generada desde master/config.yaml.
+  tenants.json: |
+    {{- $list := list -}}
+    {{- range $name, $t := .Values.tenants -}}
+    {{- $list = append $list (dict "name" $name "orgId" $t.orgId "gitSync" (default false $t.gitSync) "path" (printf "tenants/%s" $name)) -}}
+    {{- end }}
+    {{ dict "repo" (dict "url" .Values.repo.url "branch" (default "main" .Values.repo.branch)) "tenants" $list | toJson }}

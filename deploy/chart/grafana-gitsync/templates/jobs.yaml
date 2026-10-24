@@ -1,0 +1,44 @@
+{{- /*
+Un Job por cliente con gitSync: true. Hook post-install/post-upgrade de Helm, que ArgoCD
+ejecuta como PostSync: corre en cada sincronización y crea la conexión solo si falta.
+*/ -}}
+{{- if not .Values.repo.url }}
+{{- fail "repo.url está vacío: pasa master/config.yaml como fichero de values" }}
+{{- end }}
+{{- range $name, $t := .Values.tenants }}
+{{- if $t.gitSync }}
+{{- if not (regexMatch "^[a-z0-9][a-z0-9-]*$" $name) }}
+{{- fail (printf "nombre de cliente no válido: %s" $name) }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "gitsync-%s" $name | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "gitsync.labels" $ | nindent 4 }}
+    grafana-gitsync/tenant: {{ $name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ $.Values.job.backoffLimit }}
+  ttlSecondsAfterFinished: {{ $.Values.job.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        grafana-gitsync/tenant: {{ $name }}
+    spec:
+      restartPolicy: Never
+      containers:
+        {{- include "gitsync.container" (dict "root" $ "env" (list
+              (dict "name" "TENANT" "value" $name)
+              (dict "name" "ORG_ID" "value" (toString $t.orgId))
+              (dict "name" "REPO_PATH" "value" (printf "tenants/%s" $name))
+              (dict "name" "REPO_URL" "value" $.Values.repo.url)
+              (dict "name" "REPO_BRANCH" "value" (default "main" $.Values.repo.branch))
+            )) | nindent 8 }}
+      volumes:
+        {{- include "gitsync.volumes" $ | nindent 8 }}
+{{- end }}
+{{- end }}

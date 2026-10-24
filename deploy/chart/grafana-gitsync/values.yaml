@@ -1,0 +1,47 @@
+# Valores por defecto (de prueba). La lista de clientes (`tenants`) y el repo (`repo`) llegan
+# desde master/config.yaml, que se pasa como fichero de values adicional:
+#   helm template grafana-gitsync deploy/chart/grafana-gitsync -f master/config.yaml
+# En ArgoCD: ver deploy/argocd/application.example.yaml.
+
+grafana:
+  # Service de Grafana visto desde el clúster (incluye el sub-path si Grafana lo usa).
+  url: http://grafana.grafana.svc:80
+  # Secret con las credenciales (se crea aparte, nunca en este repo).
+  existingSecret: grafana-gitsync
+  userKey: grafana-user
+  passwordKey: grafana-password
+  githubTokenKey: github-token
+
+gitSync:
+  target: folder              # folder: cada cliente en su carpeta | instance: toda la org
+  intervalSeconds: 60
+  workflows: ["branch"]       # ["branch"]: cambios desde la UI por PR | []: solo lectura
+
+image:
+  repository: alpine
+  tag: "3.20"
+  # true: instala curl y jq al arrancar (necesita salida a internet).
+  # En producción, mejor una imagen que ya los traiga y false.
+  installTools: true
+  pullPolicy: IfNotPresent
+
+job:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  waitSeconds: 300
+  dryRun: false
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+# Red de seguridad opcional: revisa todos los clientes cada cierto tiempo y vuelve a crear
+# las conexiones que falten (por ejemplo, si alguien borra una en Grafana).
+cronjob:
+  enabled: false
+  schedule: "*/30 * * * *"
+
+# --- Desde master/config.yaml ---
+repo:
+  url: ""
+  branch: main
+tenants: {}

@@ -1,16 +1,18 @@
 #!/bin/sh
-# Crea la conexión de Git Sync (recurso Repository) de cada cliente con gitSync: true,
-# solo si no existe. Idempotente: se puede relanzar sin duplicar nada.
+# Crea la conexión de Git Sync (recurso Repository) de un cliente, o de todos los que tengan
+# gitSync: true, solo si no existe. Idempotente: se puede relanzar sin duplicar nada.
 #
-# Se ejecuta como Job de Kubernetes (hook PostSync de ArgoCD) o como init container en Docker.
+# Dos modos:
+#   - Un cliente (lo usa cada Job del chart de Helm): TENANT, ORG_ID, REPO_PATH, REPO_URL, REPO_BRANCH
+#   - Todos (CronJob del chart y entorno Docker de dev/): TENANTS_FILE con la lista en JSON
+#
 # Requiere: sh, curl, jq.
 #
-# Variables:
+# Variables comunes:
 #   GRAFANA_URL        p. ej. http://grafana.grafana.svc:80
 #   GRAFANA_USER       usuario administrador del servidor
 #   GRAFANA_PASSWORD
 #   GITHUB_TOKEN       token con acceso al repo (lo guarda Grafana como secreto)
-#   TENANTS_FILE       deploy/tenants.json (lo genera scripts/render.sh)
 #   SYNC_TARGET        folder (por defecto) | instance
 #   SYNC_INTERVAL      segundos entre sincronizaciones (60)
 #   WORKFLOWS          JSON: ["branch"] = cambios desde la UI por PR (por defecto); [] = solo lectura
@@ -18,13 +20,16 @@
 #   WAIT_SECONDS       espera máxima a que Grafana responda (300)
 set -eu
 
-: "${GRAFANA_URL:?}" "${GRAFANA_USER:?}" "${GRAFANA_PASSWORD:?}" "${TENANTS_FILE:?}"
+: "${GRAFANA_URL:?}" "${GRAFANA_USER:?}" "${GRAFANA_PASSWORD:?}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 SYNC_TARGET="${SYNC_TARGET:-folder}"
 SYNC_INTERVAL="${SYNC_INTERVAL:-60}"
 WORKFLOWS="${WORKFLOWS:-[\"branch\"]}"
 DRY_RUN="${DRY_RUN:-false}"
 WAIT_SECONDS="${WAIT_SECONDS:-300}"
+TENANT="${TENANT:-}"
+TENANTS_FILE="${TENANTS_FILE:-}"
+[ -n "$TENANT" ] || [ -n "$TENANTS_FILE" ] || { echo "[gitsync] ERROR: define TENANT (un cliente) o TENANTS_FILE (todos)"; exit 1; }
 
 API="${GRAFANA_URL%/}"
 AUTH="$GRAFANA_USER:$GRAFANA_PASSWORD"
@@ -60,40 +65,33 @@ if [ "$code" = "200" ] && [ "$(jq -r '.legacyStorage // false' "$TMP")" = "true"
   log "ERROR: Grafana está en legacy storage; no se crea ninguna conexión."
   exit 1
 fi
-
-REPO_URL=$(jq -r '.repo.url' "$TENANTS_FILE")
-BRANCH=$(jq -r '.repo.branch' "$TENANTS_FILE")
 [ -n "$GITHUB_TOKEN" ] || log "AVISO: GITHUB_TOKEN vacío; Grafana puede rechazar la conexión."
 
-created=0; existing=0; failed=0
-for t in $(jq -r '.tenants[] | select(.gitSync) | @base64' "$TENANTS_FILE"); do
-  row=$(echo "$t" | base64 -d)
-  name=$(echo "$row" | jq -r .name)
-  org=$(echo "$row" | jq -r .orgId)
-  path=$(echo "$row" | jq -r .path)
+# Crea la conexión de un cliente si falta. Devuelve 0 (creado/ya existe/dry-run) o 1 (error).
+# Deja en RESULT: creado | existe | dry-run | error
+ensure_repository() {
+  name=$1 org=$2 path=$3 repo_url=$4 branch=$5
   if [ "$org" = "1" ]; then ns=default; else ns="org-$org"; fi
   repo="gitsync-$name"
 
-  # 4. La org debe existir
+  # La org debe existir
   code=$(call GET "/api/orgs/$org")
   if [ "$code" != "200" ]; then
-    log "[$name] ERROR: la org $org no existe (HTTP $code)"
-    failed=$((failed + 1)); continue
+    log "[$name] ERROR: la org $org no existe (HTTP $code)"; RESULT=error; return 1
   fi
 
-  # 5. ¿Ya existe la conexión?
+  # ¿Ya existe la conexión?
   code=$(call GET "$GROUP/namespaces/$ns/repositories/$repo")
   if [ "$code" = "200" ]; then
-    log "[$name] ya existe ($ns/$repo); no se toca"
-    existing=$((existing + 1)); continue
+    log "[$name] ya existe ($ns/$repo); no se toca"; RESULT=existe; return 0
   elif [ "$code" != "404" ]; then
     log "[$name] ERROR al consultar $ns/$repo (HTTP $code): $(jq -r '.message // empty' "$TMP" 2>/dev/null)"
-    failed=$((failed + 1)); continue
+    RESULT=error; return 1
   fi
 
   body=$(jq -n \
     --arg v "provisioning.grafana.app/$VERSION" --arg name "$repo" --arg ns "$ns" \
-    --arg title "$name" --arg url "$REPO_URL" --arg branch "$BRANCH" --arg path "$path" \
+    --arg title "$name" --arg url "$repo_url" --arg branch "$branch" --arg path "$path" \
     --arg target "$SYNC_TARGET" --argjson interval "$SYNC_INTERVAL" \
     --argjson workflows "$WORKFLOWS" --arg token "$GITHUB_TOKEN" '
     {
@@ -108,20 +106,38 @@ for t in $(jq -r '.tenants[] | select(.gitSync) | @base64' "$TENANTS_FILE"); do
     } + (if $token == "" then {} else { secure: { token: { create: $token } } } end)')
 
   if [ "$DRY_RUN" = "true" ]; then
-    log "[$name] DRY_RUN: crearía $ns/$repo -> $REPO_URL ($BRANCH:$path, $SYNC_TARGET)"
-    continue
+    log "[$name] DRY_RUN: crearía $ns/$repo -> $repo_url ($branch:$path, $SYNC_TARGET)"; RESULT=dry-run; return 0
   fi
 
-  # 6. Crear
   code=$(call POST "$GROUP/namespaces/$ns/repositories" -d "$body")
   if [ "$code" = "201" ] || [ "$code" = "200" ]; then
-    log "[$name] creado $ns/$repo -> $path"
-    created=$((created + 1))
-  else
-    log "[$name] ERROR al crear (HTTP $code): $(jq -r '.message // empty' "$TMP" 2>/dev/null)"
-    failed=$((failed + 1))
+    log "[$name] creado $ns/$repo -> $path"; RESULT=creado; return 0
   fi
-done
+  log "[$name] ERROR al crear (HTTP $code): $(jq -r '.message // empty' "$TMP" 2>/dev/null)"
+  RESULT=error; return 1
+}
 
+# 4a. Modo un cliente
+if [ -n "$TENANT" ]; then
+  : "${ORG_ID:?}" "${REPO_URL:?}"
+  ensure_repository "$TENANT" "$ORG_ID" "${REPO_PATH:-tenants/$TENANT}" "$REPO_URL" "${REPO_BRANCH:-main}"
+  exit $?
+fi
+
+# 4b. Modo todos
+REPO_URL=$(jq -r '.repo.url' "$TENANTS_FILE")
+BRANCH=$(jq -r '.repo.branch // "main"' "$TENANTS_FILE")
+created=0; existing=0; failed=0
+for t in $(jq -r '.tenants[] | select(.gitSync) | @base64' "$TENANTS_FILE"); do
+  row=$(printf '%s' "$t" | base64 -d)
+  RESULT=""
+  ensure_repository "$(printf '%s' "$row" | jq -r .name)" "$(printf '%s' "$row" | jq -r .orgId)" \
+    "$(printf '%s' "$row" | jq -r .path)" "$REPO_URL" "$BRANCH" || true
+  case "$RESULT" in
+    creado) created=$((created + 1)) ;;
+    existe) existing=$((existing + 1)) ;;
+    error)  failed=$((failed + 1)) ;;
+  esac
+done
 log "Resumen: creados=$created ya_existian=$existing errores=$failed"
 [ "$failed" -eq 0 ]
