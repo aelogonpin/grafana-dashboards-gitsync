@@ -34,21 +34,13 @@ job:
     requests: { cpu: 10m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
 
-# Preparar orgs y datasources de los clientes (opcional). Comprueba antes de escribir:
-# crea solo lo que falta y NUNCA modifica lo existente (solo avisa). Corre antes que los Jobs de Git Sync.
+# Crear las orgs de los clientes que falten (opcional). Nunca modifica las que existen.
+# Los datasources los provisiona el chart de Grafana: la org debe existir antes.
+# Corre antes que los Jobs de Git Sync.
 orgs:
   enabled: false
   dryRun: false               # true: solo informa de lo que haría (recomendado la primera vez)
   renameOrgs: false           # true: renombra las orgs cuyo nombre no coincide con el del config
-  datasources:
-    mimirUrl: http://mimir-gateway.mimir.svc/prometheus    # dummy
-    lokiUrl: http://loki-gateway.loki.svc                    # dummy
-    tempoUrl: ""                                             # vacío: no se gestionan datasources de trazas
-  # Basic auth de Loki (opcional): Secret y claves con usuario y contraseña.
-  lokiAuth:
-    existingSecret: ""
-    userKey: loki-user
-    passwordKey: loki-password
 
 # Red de seguridad opcional: revisa todos los clientes cada cierto tiempo y vuelve a crear
 # las conexiones que falten (por ejemplo, si alguien borra una en Grafana).

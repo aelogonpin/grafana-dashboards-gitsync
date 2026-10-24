@@ -1,5 +1,5 @@
 {{- /*
-Prepara orgs y datasources de los clientes sin modificar lo existente. Hook con peso -5:
+Crea las orgs de los clientes que falten sin modificar las existentes (los datasources, en el chart de Grafana). Hook con peso -5:
 corre antes que los Jobs de Git Sync (peso 0) en la misma fase (PostSync en ArgoCD).
 */ -}}
 {{- if .Values.orgs.enabled }}
@@ -33,20 +33,9 @@ spec:
             - name: GRAFANA_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.grafana.existingSecret }}, key: {{ .Values.grafana.passwordKey }} } }
             - { name: TENANTS_FILE, value: /work/tenants.json }
-            - { name: MIMIR_URL, value: {{ .Values.orgs.datasources.mimirUrl | quote }} }
-            - { name: LOKI_URL, value: {{ .Values.orgs.datasources.lokiUrl | quote }} }
-            - { name: TEMPO_URL, value: {{ .Values.orgs.datasources.tempoUrl | quote }} }
             - { name: RENAME_ORGS, value: {{ .Values.orgs.renameOrgs | quote }} }
             - { name: DRY_RUN, value: {{ .Values.orgs.dryRun | quote }} }
             - { name: WAIT_SECONDS, value: {{ .Values.job.waitSeconds | quote }} }
-            {{- with .Values.orgs.lokiAuth }}
-            {{- if .existingSecret }}
-            - name: LOKI_USER
-              valueFrom: { secretKeyRef: { name: {{ .existingSecret }}, key: {{ .userKey }} } }
-            - name: LOKI_PASS
-              valueFrom: { secretKeyRef: { name: {{ .existingSecret }}, key: {{ .passwordKey }} } }
-            {{- end }}
-            {{- end }}
           volumeMounts:
             - { name: work, mountPath: /work, readOnly: true }
           resources:
