@@ -7,7 +7,9 @@ metadata:
 data:
   gitsync-sync.sh: |
 {{ .Files.Get "files/gitsync-sync.sh" | indent 4 }}
-  # Lista de clientes para el modo "todos" (CronJob), generada desde master/config.yaml.
+  orgs-sync.sh: |
+{{ .Files.Get "files/orgs-sync.sh" | indent 4 }}
+  # Lista de clientes (CronJob y Job de orgs), generada desde master/config.yaml.
   tenants.json: |
     {{- $list := list -}}
     {{- range $name, $t := .Values.tenants -}}

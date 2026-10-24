@@ -20,6 +20,7 @@ metadata:
     grafana-gitsync/tenant: {{ $name }}
   annotations:
     helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: {{ $.Values.job.backoffLimit }}

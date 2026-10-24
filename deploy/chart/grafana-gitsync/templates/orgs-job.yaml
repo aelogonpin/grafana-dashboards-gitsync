@@ -1,0 +1,56 @@
+{{- /*
+Prepara orgs y datasources de los clientes sin modificar lo existente. Hook con peso -5:
+corre antes que los Jobs de Git Sync (peso 0) en la misma fase (PostSync en ArgoCD).
+*/ -}}
+{{- if .Values.orgs.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "gitsync.name" . }}-orgs
+  labels:
+    {{- include "gitsync.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: orgs
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - {{ if .Values.image.installTools }}apk add --no-cache -q curl jq && {{ end }}sh /work/orgs-sync.sh
+          env:
+            - { name: GRAFANA_URL, value: {{ .Values.grafana.url | quote }} }
+            - name: GRAFANA_USER
+              valueFrom: { secretKeyRef: { name: {{ .Values.grafana.existingSecret }}, key: {{ .Values.grafana.userKey }} } }
+            - name: GRAFANA_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.grafana.existingSecret }}, key: {{ .Values.grafana.passwordKey }} } }
+            - { name: TENANTS_FILE, value: /work/tenants.json }
+            - { name: MIMIR_URL, value: {{ .Values.orgs.datasources.mimirUrl | quote }} }
+            - { name: LOKI_URL, value: {{ .Values.orgs.datasources.lokiUrl | quote }} }
+            - { name: TEMPO_URL, value: {{ .Values.orgs.datasources.tempoUrl | quote }} }
+            - { name: RENAME_ORGS, value: {{ .Values.orgs.renameOrgs | quote }} }
+            - { name: DRY_RUN, value: {{ .Values.orgs.dryRun | quote }} }
+            - { name: WAIT_SECONDS, value: {{ .Values.job.waitSeconds | quote }} }
+            {{- with .Values.orgs.lokiAuth }}
+            {{- if .existingSecret }}
+            - name: LOKI_USER
+              valueFrom: { secretKeyRef: { name: {{ .existingSecret }}, key: {{ .userKey }} } }
+            - name: LOKI_PASS
+              valueFrom: { secretKeyRef: { name: {{ .existingSecret }}, key: {{ .passwordKey }} } }
+            {{- end }}
+            {{- end }}
+          volumeMounts:
+            - { name: work, mountPath: /work, readOnly: true }
+          resources:
+            {{- toYaml .Values.job.resources | nindent 12 }}
+      volumes:
+        {{- include "gitsync.volumes" . | nindent 8 }}
+{{- end }}
