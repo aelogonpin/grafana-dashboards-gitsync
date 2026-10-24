@@ -5,6 +5,8 @@ description: Levantar, comprobar, depurar o reiniciar el entorno Docker de prueb
 
 # Entorno de pruebas
 
+Entorno Docker de `dev/`. Para probar el chart en un clúster de Kubernetes con ArgoCD, usa la skill `desplegar-en-kubernetes`. El init container `gitsync-init` usa el mismo script que el chart (`deploy/chart/grafana-gitsync/files/gitsync-sync.sh`) en modo "todos los clientes".
+
 Todo desde la raíz del repo. Por defecto, Grafana está en http://localhost:3001 (admin/admin).
 
 ## Levantarlo en una máquina nueva

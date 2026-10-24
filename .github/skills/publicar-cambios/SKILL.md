@@ -11,6 +11,7 @@ El repo es **público**. Un dato de producción subido queda en el historial, en
 
 ```bash
 scripts/render.sh --check                                    # debe acabar en OK
+helm lint deploy/chart/grafana-gitsync -f master/config.yaml  # si has tocado el chart o el config
 git status --short                                           # revisa cada fichero: ¿hay alguno que no sea tuyo?
 git diff --cached                                            # tras el git add
 ```

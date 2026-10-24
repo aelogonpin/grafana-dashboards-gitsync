@@ -11,7 +11,7 @@ Todo se decide en `master/config.yaml`; nada más se toca a mano.
 tenants:
   <cliente>:                 # minúsculas, números y guiones; será la ruta tenants/<cliente>
     orgId: <n>               # ID de su org en Grafana; único
-    gitSync: false           # true = el Job crea su conexión de Git Sync
+    gitSync: false           # true = su Job gitsync-<cliente> crea la conexión de Git Sync
     general:                 # rutas relativas a master/general/ (carpeta entera o fichero)
       - kubernetes
     exclude:                 # opcional: rutas que se quitan de lo seleccionado
@@ -20,9 +20,9 @@ tenants:
 
 ## Alta de un cliente
 
-1. Confirma con el usuario el `orgId` real de la org en Grafana. La org y sus datasources deben existir antes, con nombres que empiecen por `Mimir` y `Loki` (las variables de los paneles los buscan con `/^Mimir/` y `/^Loki/`).
+1. La org y sus datasources se crean **en el repo del stack de monitorización** (aprovisionamiento del chart de Grafana), no en este repo. Deben existir antes, con datasources cuyos nombres empiecen por `Mimir` y `Loki` (las variables de los paneles los buscan con `/^Mimir/` y `/^Loki/`). Confirma con el usuario el `orgId` real.
 2. Añade el bloque con `gitSync: false` y valida: `scripts/render.sh --check`.
-3. Cuando el usuario quiera conectarlo, pasa a `gitSync: true`. Al sincronizar ArgoCD, el chart `deploy/chart/grafana-gitsync` crea el Job `gitsync-<cliente>`, que crea el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>`, con `path: tenants/<cliente>` y `target: folder`.
+3. Cuando el usuario quiera conectarlo, pasa a `gitSync: true` y publica (skill `publicar-cambios`). Al sincronizar ArgoCD, el chart `deploy/chart/grafana-gitsync` (skill `desplegar-en-kubernetes`) crea el Job `gitsync-<cliente>` en el namespace `grafana-gitsync`, que crea el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>`, con `path: tenants/<cliente>` y `target: folder`.
 
 ## Cambiar lo que recibe
 

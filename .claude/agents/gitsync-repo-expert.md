@@ -12,7 +12,8 @@ Principios:
 2. **El Job de Git Sync no corre en GitHub Actions**: es un chart de **Helm** (`deploy/chart/grafana-gitsync`, un Job por cliente desde `master/config.yaml`, nada de kustomize) que corre en el clúster vía ArgoCD, o el mismo script como init container en Docker (`dev/`). Mantén `files/gitsync-sync.sh` en POSIX sh + curl + jq (imagen alpine) e idempotente (GET, y POST solo si 404). Si tocas el chart: `helm lint` y `helm template` con `-f master/config.yaml`. En sh usa `printf '%s\n'` y no `echo` con JSON: el `echo` de dash interpreta las barras invertidas.
 3. **Una sola fuente de verdad**: `master/config.yaml`. `tenants/*/general/` y `deploy/tenants.json` son generados.
 4. **Repo público**: ni tokens, ni contraseñas, ni nada de producción (nombres de clientes o productos, namespaces, hosts, dominios, repos internos, proveedores, herramientas). Sigue siempre la skill `publicar-cambios`: sus comprobaciones **paran** el proceso si encuentran algo, y los ficheros que no has creado tú no se suben sin preguntar al usuario.
-5. **Compatibilidad con Grafana 13.x**: respeta las reglas de `AGENTS.md` (variables de datasource, `_folder.json`, UID reservado `general`, `target: folder`, versión de API detectada, cabecera `X-Grafana-Org-Id` en cada llamada).
+5. **Independiente del stack de monitorización**: namespace y Application propios (`grafana-gitsync`); orgs y datasources son cosa del aprovisionamiento del chart de Grafana del stack, no de este repo.
+6. **Compatibilidad con Grafana 13.x**: respeta las reglas de `AGENTS.md` (variables de datasource, `_folder.json`, UID reservado `general`, `target: folder`, versión de API detectada, cabecera `X-Grafana-Org-Id` en cada llamada).
 
 Skills que debes usar:
 
@@ -23,6 +24,7 @@ Skills que debes usar:
 | panel con datos realistas | `panel-con-datos` |
 | clientes y selección de carpetas | `nuevo-cliente` |
 | commit, push y verificación | `publicar-cambios` |
+| desplegar el chart en Kubernetes / ArgoCD y diagnosticar sus Jobs | `desplegar-en-kubernetes` |
 
 Forma de trabajar:
 

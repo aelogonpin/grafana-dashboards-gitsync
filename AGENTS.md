@@ -35,6 +35,11 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - El 4.º dato de `convert-dashboard.sh` titula la **carpeta** destino, no el panel: solo para carpetas nuevas. En una existente renombraría la carpeta para todos los clientes.
 - Los paneles exportados de producción guardan los **valores actuales de sus variables** (`templating.list[].current`): clúster, nodos, IPs. Revísalos antes de subir.
 - Las comprobaciones previas a un push deben **parar** si encuentran algo; nunca `git add -A` a ciegas ni subir ficheros que no has creado sin preguntar.
+- ArgoCD ejecuta los hooks `post-install,post-upgrade` de Helm como **PostSync** y respeta `helm.sh/hook-weight`. Los Jobs-hook **no se borran por prune**: al renombrarlos o cambiar de namespace, borra los antiguos a mano.
+- Al cambiar el namespace destino de la Application, el sync automático mueve los recursos pero los hooks corren en el **siguiente** sync: relánzalo.
+- El Secret `grafana-gitsync` **no lo gestiona el chart**: hay que crearlo (o copiarlo) en el namespace del chart.
+- Orgs y datasources: los crea el **aprovisionamiento del chart de Grafana** en el repo del stack, no este repo (decisión del usuario; un Job de orgs se descartó). La org debe existir antes que sus datasources provisionados.
+- Para mirar el estado en Grafana desde el clúster usa `kubectl port-forward` y curl local; `kubectl run` con credenciales en `--env` las deja en los logs del contenedor.
 
 ## Cómo trabajar aquí
 
@@ -49,6 +54,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
   - `panel-con-datos`: paneles con datos realistas (LogQL y PromQL) y su verificación.
   - `nuevo-cliente`: clientes y selección de carpetas.
   - `publicar-cambios`: lista de comprobación antes de commit y push (repo público) y verificación posterior.
+  - `desplegar-en-kubernetes`: desplegar el chart con ArgoCD o helm, requisitos, comprobación y diagnóstico de los Jobs.
 - Agentes `gitsync-repo-expert`, `revisor-paneles` y `disenador-paneles`, en `.github/agents/*.agent.md` (Copilot) y `.claude/agents/*.md` (Claude Code). Mismo cuerpo con distinta cabecera: si cambias uno, cambia el otro.
 - Contexto: este `AGENTS.md` es la fuente; `CLAUDE.md` lo importa y `.github/copilot-instructions.md` resume las reglas para Copilot (chat y code review).
 

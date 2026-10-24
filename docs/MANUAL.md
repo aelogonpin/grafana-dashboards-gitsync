@@ -96,18 +96,18 @@ También se puede crear desde Grafana: guardas el panel en la carpeta "Paneles p
 
 ### Receta 6: añadir un cliente nuevo
 
-1. En Grafana, crea la org del cliente y sus datasources. Sus nombres **tienen que empezar** por `Mimir` y `Loki` (por ejemplo `Mimir-cliente-d`, `Loki-cliente-d`).
-2. En `master/config.yaml`:
+1. **En el repo del stack de monitorización** (no en este): crea la org del cliente y sus datasources con el aprovisionamiento de Grafana. Los nombres de los datasources **tienen que empezar** por `Mimir` y `Loki` (por ejemplo `Mimir-cliente-d`, `Loki-cliente-d`). Despliégalo y apunta el ID de la org.
+2. En `master/config.yaml` de este repo:
    ```yaml
    cliente-d:
-     orgId: 4             # el ID de su org en Grafana
+     orgId: 4             # el ID real de su org en Grafana
      gitSync: false       # todavía no se conecta
      general:
        - kubernetes
    ```
 3. Push. El robot crea `tenants/cliente-d/`.
 4. Cuando quieras que su Grafana lo lea, cambia a `gitSync: true` y haz push.
-5. El Job de Git Sync (en Kubernetes o en Docker) crea su conexión la próxima vez que se ejecute.
+5. ArgoCD lo detecta y lanza el Job **`gitsync-cliente-d`** en el namespace `grafana-gitsync`, que crea su conexión. En ArgoCD verás ese Job en verde; si sale en rojo, su log dice por qué (por ejemplo, que la org no existe).
 
 ### Receta 7: título de una carpeta en Grafana
 

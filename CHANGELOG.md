@@ -4,6 +4,10 @@ Historial de cambios que afectan al uso del repo, del más reciente al más anti
 
 ## 2026-10-24
 
+### Decisiones
+- El sistema de paneles es **independiente del stack de monitorización**: Application de ArgoCD y namespace propios (`grafana-gitsync`); solo necesita llegar a Grafana por la red.
+- Las **orgs y los datasources** los crea el aprovisionamiento del chart de Grafana (repo del stack). Se descartó un Job de orgs en este chart (PR #2 cerrada sin mergear).
+
 ### Cambiado
 - El ejemplo de Application usa un namespace propio (`grafana-gitsync`, con `CreateNamespace=true`): el sistema de paneles es independiente del stack de monitorización.
 - El Job de Git Sync pasa a ser un **chart de Helm** (`deploy/chart/grafana-gitsync`) en lugar de kustomize. Lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true` (hook `post-install,post-upgrade`, PostSync en ArgoCD), así que en ArgoCD se ve el estado de cada cliente por separado.
@@ -13,6 +17,8 @@ Historial de cambios que afectan al uso del repo, del más reciente al más anti
 - `deploy/argocd/application.example.yaml`: Application con dos fuentes (el chart y `master/config.yaml` como values).
 - CronJob opcional en el chart (`cronjob.enabled`) que recrea conexiones borradas.
 - La validación de PRs ejecuta `helm lint` y `helm template` del chart con `master/config.yaml`.
+- Skill `desplegar-en-kubernetes`: requisitos, despliegue con ArgoCD o helm, comprobación y diagnóstico de los Jobs.
+- Documentación al día con el flujo de ArgoCD: receta de alta de cliente del manual, skills `nuevo-cliente`, `publicar-cambios` y `probar-en-local`, `AGENTS.md`, instrucciones de Copilot y agentes.
 
 ### Eliminado
 - `deploy/kustomization.yaml` y `deploy/gitsync/job.yaml`.
