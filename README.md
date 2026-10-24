@@ -129,24 +129,29 @@ helm upgrade --install grafana-gitsync deploy/chart/grafana-gitsync -n <namespac
 | `gitSync.workflows` | `["branch"]` | cambios desde la UI por PR; `[]` = solo lectura |
 | `image.installTools` | `true` | instala curl y jq al arrancar (necesita internet); `false` con una imagen que ya los traiga |
 | `cronjob.enabled` | `false` | CronJob que revisa todos los clientes periódicamente y recrea conexiones borradas |
-| `orgs.enabled` | `false` | Job que prepara las orgs y sus datasources (ver abajo) |
+| `orgs.enabled` | `false` | Job que crea las orgs de los clientes que falten (ver abajo) |
 | `orgs.dryRun` | `false` | el Job de orgs solo informa de lo que haría |
-| `orgs.datasources.mimirUrl`, `lokiUrl`, `tempoUrl` | de prueba | URLs para los datasources que haya que crear (`tempoUrl` vacío: no gestiona trazas) |
-| `orgs.lokiAuth.existingSecret`, `userKey`, `passwordKey` | vacío | basic auth de Loki desde un Secret (opcional) |
 | `orgs.renameOrgs` | `false` | renombrar las orgs cuyo nombre no coincide con el del config |
 | `job.dryRun` | `false` | solo informa |
 | `tenants`, `repo` | — | vienen de `master/config.yaml` |
 
-### Orgs y datasources (opcional, `orgs.enabled`)
+### Orgs (opcional, `orgs.enabled`)
 
-Un Job `<release>-orgs` corre **antes** que los de Git Sync (`hook-weight: -5`) y prepara cada org del config **sin modificar nada que ya exista**:
+Un Job `<release>-orgs` corre **antes** que los de Git Sync (`hook-weight: -5`) y crea las orgs del config que falten, **sin modificar las que existen**:
 
-| Qué | Si existe | Si no existe |
-|---|---|---|
-| Org | no se toca; si su nombre no coincide, solo avisa (`orgs.renameOrgs` para renombrarla) | se crea solo si su `orgId` es el siguiente que asignará Grafana (no reutiliza ids); si no, error explicando por qué |
-| Datasource por tipo (`prometheus`, `loki`, `tempo`) | no se toca, sea cual sea su nombre; si ninguno empieza por `Mimir` / `Loki` / `Tempo`, avisa (los paneles no lo encontrarían) | crea `Mimir-<cliente>`, `Loki-<cliente>` o `Tempo-<cliente>` con `X-Scope-OrgID=<cliente>` |
+| Org | Qué hace |
+|---|---|
+| existe | no la toca; si su nombre no coincide con el del config, solo avisa (`orgs.renameOrgs` para renombrarla) |
+| no existe y su `orgId` es el siguiente que asignará Grafana | la crea |
+| no existe y su `orgId` no es el siguiente (Grafana no reutiliza ids) | error explicando qué id asignaría; no crea orgs de relleno |
 
-La primera vez en un entorno que ya tiene orgs, lánzalo con `orgs.dryRun=true` y revisa el log: dice qué existe, qué crearía y qué no encaja.
+**Los datasources no los gestiona este chart**: los provisiona el chart de Grafana (`datasources.yaml` o sidecar). Como Grafana no arranca si un datasource provisionado apunta a una org que no existe, el orden para un cliente nuevo es:
+
+1. Añadirlo a `master/config.yaml` → el Job crea su org.
+2. Añadir sus datasources en el chart de Grafana, con nombres que empiecen por `Mimir` y `Loki`, que es lo que buscan las variables de los paneles.
+3. Poner `gitSync: true` → su Job lo conecta.
+
+La primera vez en un entorno que ya tiene orgs, lánzalo con `orgs.dryRun=true` y revisa el log.
 
 Para dar de alta o conectar un cliente basta con cambiar `master/config.yaml` (`gitSync: true`) y hacer push: ArgoCD sincroniza y su Job lo conecta. El entorno Docker de `dev/` usa el mismo script en modo "todos los clientes" (`TENANTS_FILE`).
 

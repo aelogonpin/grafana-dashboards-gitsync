@@ -13,7 +13,7 @@ Historial de cambios que afectan al uso del repo, del más reciente al más anti
 - CronJob opcional en el chart (`cronjob.enabled`) que recrea conexiones borradas.
 - La validación de PRs ejecuta `helm lint` y `helm template` del chart con `master/config.yaml`.
 
-- Job opcional de orgs y datasources en el chart (`orgs.enabled`): comprueba antes de escribir, solo crea lo que falta, nunca modifica lo existente (solo avisa), no crea orgs de relleno para alcanzar un id y tiene modo de comprobación (`orgs.dryRun`). Corre antes que los Jobs de Git Sync.
+- Job opcional de orgs en el chart (`orgs.enabled`): crea las orgs de los clientes que falten, nunca modifica las que existen (solo avisa), no crea orgs de relleno para alcanzar un id y tiene modo de comprobación (`orgs.dryRun`). Corre antes que los Jobs de Git Sync. Los datasources se dejan al provisioning del chart de Grafana.
 
 ### Eliminado
 - `deploy/kustomization.yaml` y `deploy/gitsync/job.yaml`.
