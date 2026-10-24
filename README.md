@@ -24,10 +24,10 @@ scripts/render.sh             lógica de carpetas (bash + yq + jq + rsync, sin I
 scripts/convert-dashboard.sh  convierte un export de Grafana al formato del repo
 scripts/folder-title.sh       define el título de una carpeta en Grafana
 deploy/
-  tenants.json                GENERADO: lo lee el Job de Git Sync
-  gitsync/gitsync-sync.sh     Job idempotente de Git Sync (sh + curl + jq)
-  gitsync/job.yaml            Job de Kubernetes (hook PostSync de ArgoCD)
-  kustomization.yaml
+  chart/grafana-gitsync/      chart de Helm: un Job de Git Sync por cliente (lee master/config.yaml)
+    files/gitsync-sync.sh     script idempotente (sh + curl + jq)
+  argocd/application.example.yaml   Application de ArgoCD de ejemplo
+  tenants.json                GENERADO: lista de clientes para el entorno Docker de dev/
 dev/                          entorno local: Grafana 13 multi-org en Docker
 ```
 
@@ -97,24 +97,42 @@ Cada org tiene sus propios datasources con UIDs distintos. Los paneles **general
 
 Para probar en local: `scripts/render.sh --check` (no escribe nada) o `scripts/render.sh`.
 
-## Job de Git Sync
+## Job de Git Sync (chart de Helm)
 
-`deploy/gitsync/gitsync-sync.sh` lee `deploy/tenants.json` y, por cada cliente con `gitSync: true`:
+Las conexiones de Git Sync las crea un **Job dentro del clúster**, nunca GitHub Actions. El chart `deploy/chart/grafana-gitsync` lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true`. Cada Job:
 
 1. Espera a Grafana, detecta la versión de la API de provisioning y aborta si Grafana sigue en legacy storage.
 2. Comprueba que la org existe. Namespace: `default` para la org 1 y `org-<id>` para el resto.
 3. Si el `Repository` `gitsync-<cliente>` ya existe, no lo toca. Si no, lo crea apuntando a `tenants/<cliente>`.
 
-| Variable | Por defecto | Descripción |
-|---|---|---|
-| `GRAFANA_URL`, `GRAFANA_USER`, `GRAFANA_PASSWORD` | — | Grafana y administrador del servidor |
-| `GITHUB_TOKEN` | — | token con acceso al repo |
-| `TENANTS_FILE` | — | ruta a `tenants.json` |
-| `SYNC_TARGET` | `folder` | `folder`: el cliente sincroniza en su carpeta; `instance`: toda la org |
-| `WORKFLOWS` | `["branch"]` | cambios desde la UI por PR; `[]` = solo lectura |
-| `DRY_RUN` | `false` | solo informa |
+Los Jobs son hooks `post-install,post-upgrade` de Helm, que ArgoCD ejecuta como **PostSync**: se lanzan en cada sincronización. En ArgoCD se ve un Job por cliente con su estado.
 
-En Kubernetes: `kubectl apply -k deploy/` (o una app de ArgoCD), con el Secret `grafana-gitsync` creado aparte (ver `deploy/gitsync/secret.example.yaml`).
+```
+master/config.yaml  ──(push)──►  ArgoCD sincroniza  ──►  Job gitsync-<cliente> por cada gitSync: true
+                                                            └─► crea la conexión si falta ──► Git Sync carga sus paneles
+```
+
+**Instalación con ArgoCD:** ver `deploy/argocd/application.example.yaml`. Usa dos fuentes del mismo repo: el chart y `master/config.yaml` como values (`$paneles/master/config.yaml`). Antes, crea el Secret `grafana-gitsync` en el namespace destino (`deploy/chart/grafana-gitsync/secret.example.yaml`).
+
+**Sin ArgoCD:**
+
+```bash
+helm upgrade --install grafana-gitsync deploy/chart/grafana-gitsync -n <namespace> \
+  -f master/config.yaml --set grafana.url=http://<service-de-grafana>
+```
+
+| Value | Por defecto | Descripción |
+|---|---|---|
+| `grafana.url` | `http://grafana.grafana.svc:80` | Service de Grafana visto desde el clúster (con sub-path si lo usa) |
+| `grafana.existingSecret` | `grafana-gitsync` | Secret con `grafana-user`, `grafana-password` y `github-token` |
+| `gitSync.target` | `folder` | `folder`: el cliente sincroniza en su carpeta; `instance`: toda la org |
+| `gitSync.workflows` | `["branch"]` | cambios desde la UI por PR; `[]` = solo lectura |
+| `image.installTools` | `true` | instala curl y jq al arrancar (necesita internet); `false` con una imagen que ya los traiga |
+| `cronjob.enabled` | `false` | CronJob que revisa todos los clientes periódicamente y recrea conexiones borradas |
+| `job.dryRun` | `false` | solo informa |
+| `tenants`, `repo` | — | vienen de `master/config.yaml` |
+
+Para dar de alta o conectar un cliente basta con cambiar `master/config.yaml` (`gitSync: true`) y hacer push: ArgoCD sincroniza y su Job lo conecta. El entorno Docker de `dev/` usa el mismo script en modo "todos los clientes" (`TENANTS_FILE`).
 
 ## Entorno de pruebas
 

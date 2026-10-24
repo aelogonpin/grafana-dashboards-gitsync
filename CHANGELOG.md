@@ -2,6 +2,20 @@
 
 Historial de cambios que afectan al uso del repo, del más reciente al más antiguo. Añade una entrada por cada cambio visible: nuevos scripts, cambios de comportamiento o de documentación importantes.
 
+## 2026-10-24
+
+### Cambiado
+- El Job de Git Sync pasa a ser un **chart de Helm** (`deploy/chart/grafana-gitsync`) en lugar de kustomize. Lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true` (hook `post-install,post-upgrade`, PostSync en ArgoCD), así que en ArgoCD se ve el estado de cada cliente por separado.
+- `gitsync-sync.sh` se mueve a `deploy/chart/grafana-gitsync/files/` y admite dos modos: un cliente (`TENANT`, `ORG_ID`, `REPO_PATH`, `REPO_URL`, `REPO_BRANCH`) o todos (`TENANTS_FILE`, usado por el CronJob y por `dev/`).
+
+### Añadido
+- `deploy/argocd/application.example.yaml`: Application con dos fuentes (el chart y `master/config.yaml` como values).
+- CronJob opcional en el chart (`cronjob.enabled`) que recrea conexiones borradas.
+- La validación de PRs ejecuta `helm lint` y `helm template` del chart con `master/config.yaml`.
+
+### Eliminado
+- `deploy/kustomization.yaml` y `deploy/gitsync/job.yaml`.
+
 ## 2026-10-21
 
 ### Añadido
