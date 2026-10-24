@@ -1,0 +1,6 @@
+apiVersion: v2
+name: grafana-gitsync
+description: Crea la conexión de Git Sync de cada cliente (org de Grafana) que tenga gitSync true en master/config.yaml. Un Job por cliente, idempotente.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -93,5 +93,5 @@ services:
       DRY_RUN: ${DRY_RUN:-false}
     volumes:
       - ../deploy/tenants.json:/work/tenants.json:ro
-      - ../deploy/gitsync/gitsync-sync.sh:/work/gitsync-sync.sh:ro
+      - ../deploy/chart/grafana-gitsync/files/gitsync-sync.sh:/work/gitsync-sync.sh:ro
     entrypoint: ["/bin/sh", "-c", "apk add --no-cache -q curl jq && sh /work/gitsync-sync.sh"]

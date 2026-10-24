@@ -22,7 +22,7 @@ tenants:
 
 1. Confirma con el usuario el `orgId` real de la org en Grafana. La org y sus datasources deben existir antes, con nombres que empiecen por `Mimir` y `Loki` (las variables de los paneles los buscan con `/^Mimir/` y `/^Loki/`).
 2. Añade el bloque con `gitSync: false` y valida: `scripts/render.sh --check`.
-3. Cuando el usuario quiera conectarlo, pasa a `gitSync: true`. En el siguiente despliegue, el Job (`deploy/gitsync/gitsync-sync.sh`) crea el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>`, con `path: tenants/<cliente>` y `target: folder`.
+3. Cuando el usuario quiera conectarlo, pasa a `gitSync: true`. Al sincronizar ArgoCD, el chart `deploy/chart/grafana-gitsync` crea el Job `gitsync-<cliente>`, que crea el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>`, con `path: tenants/<cliente>` y `target: folder`.
 
 ## Cambiar lo que recibe
 

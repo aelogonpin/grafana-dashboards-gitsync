@@ -1,0 +1,38 @@
+# EJEMPLO con valores de prueba. Application de ArgoCD que instala el chart grafana-gitsync
+# y le pasa master/config.yaml (la lista de clientes) como fichero de values.
+# Al cambiar config.yaml (p. ej. gitSync: true para un cliente), ArgoCD sincroniza y
+# lanza un Job por cliente, que crea su conexión de Git Sync solo si falta.
+#
+# Antes: crea el Secret grafana-gitsync en el namespace destino (ver
+# deploy/chart/grafana-gitsync/secret.example.yaml) y, si el repo es privado,
+# da de alta sus credenciales en ArgoCD.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-gitsync
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grafana                       # donde está Grafana y el Secret
+  sources:
+    # 1. El chart
+    - repoURL: https://github.com/<organizacion>/<repo-de-paneles>.git
+      targetRevision: main
+      path: deploy/chart/grafana-gitsync
+      helm:
+        releaseName: grafana-gitsync
+        valueFiles:
+          - $paneles/master/config.yaml        # lista de clientes y repo
+        parameters:
+          - name: grafana.url
+            value: http://grafana.grafana.svc:80   # Service real (con sub-path si lo hay)
+    # 2. El mismo repo, solo como origen de valores ($paneles)
+    - repoURL: https://github.com/<organizacion>/<repo-de-paneles>.git
+      targetRevision: main
+      ref: paneles
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

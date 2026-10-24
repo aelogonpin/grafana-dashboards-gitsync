@@ -28,3 +28,8 @@ jobs:
 
       - name: Validar config y paneles
         run: scripts/render.sh --check
+
+      - name: Validar el chart de Helm del Job de Git Sync
+        run: |
+          helm lint deploy/chart/grafana-gitsync -f master/config.yaml
+          helm template grafana-gitsync deploy/chart/grafana-gitsync -f master/config.yaml > /dev/null

@@ -9,7 +9,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - El `uid` de un panel es único dentro de cada cliente, como mucho 40 caracteres, y nunca `general` (UID reservado de Grafana).
 - Cada carpeta lleva `_folder.json` (`kind: Folder`, `metadata.name` = UID, `spec.title`).
 - La lógica es determinista: bash + yq v4 + jq + rsync, sin IA.
-- El Job de Git Sync (`deploy/gitsync/gitsync-sync.sh`) corre como Job de Kubernetes o init container en Docker, **nunca en GitHub Actions**. Es POSIX sh + curl + jq e idempotente.
+- El Job de Git Sync es un chart de **Helm** (`deploy/chart/grafana-gitsync`, un Job por cliente desde `master/config.yaml`); corre en el clúster (ArgoCD) o como init container en Docker, **nunca en GitHub Actions**. Es POSIX sh + curl + jq e idempotente.
 - Nunca subas tokens, contraseñas ni nada de producción (nombres reales de clientes o productos, namespaces, hosts, dominios, repos internos). Sigue la skill `publicar-cambios`.
 
 ## Antes de proponer un cambio
