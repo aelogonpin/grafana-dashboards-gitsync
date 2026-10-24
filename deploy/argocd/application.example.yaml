@@ -3,7 +3,11 @@
 # Al cambiar config.yaml (p. ej. gitSync: true para un cliente), ArgoCD sincroniza y
 # lanza un Job por cliente, que crea su conexión de Git Sync solo si falta.
 #
-# Antes: crea el Secret grafana-gitsync en el namespace destino (ver
+# Es independiente del stack de monitorización: tiene su propio namespace (grafana-gitsync) y solo
+# necesita llegar a Grafana por la red. Grafana (con Git Sync activado), sus orgs y sus datasources
+# se gestionan en el repo del stack, no aquí.
+#
+# Antes: crea el Secret grafana-gitsync en el namespace grafana-gitsync (ver
 # deploy/chart/grafana-gitsync/secret.example.yaml) y, si el repo es privado,
 # da de alta sus credenciales en ArgoCD.
 apiVersion: argoproj.io/v1alpha1
@@ -15,7 +19,7 @@ spec:
   project: default
   destination:
     server: https://kubernetes.default.svc
-    namespace: grafana                       # donde está Grafana y el Secret
+    namespace: grafana-gitsync               # namespace propio (lo crea ArgoCD); aquí va el Secret
   sources:
     # 1. El chart
     - repoURL: https://github.com/<organizacion>/<repo-de-paneles>.git
@@ -27,7 +31,7 @@ spec:
           - $paneles/master/config.yaml        # lista de clientes y repo
         parameters:
           - name: grafana.url
-            value: http://grafana.grafana.svc:80   # Service real (con sub-path si lo hay)
+            value: http://grafana.grafana.svc:80   # Service de Grafana en su namespace (con sub-path si lo hay)
     # 2. El mismo repo, solo como origen de valores ($paneles)
     - repoURL: https://github.com/<organizacion>/<repo-de-paneles>.git
       targetRevision: main
@@ -36,3 +40,5 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

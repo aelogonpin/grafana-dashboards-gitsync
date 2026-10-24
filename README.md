@@ -99,7 +99,16 @@ Para probar en local: `scripts/render.sh --check` (no escribe nada) o `scripts/r
 
 ## Job de Git Sync (chart de Helm)
 
-Las conexiones de Git Sync las crea un **Job dentro del clúster**, nunca GitHub Actions. El chart `deploy/chart/grafana-gitsync` lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true`. Cada Job:
+Las conexiones de Git Sync las crea un **Job dentro del clúster**, nunca GitHub Actions.
+
+**Es independiente del stack de monitorización.** Este repo y su chart solo conectan cada org con su carpeta; se instalan con su propia Application de ArgoCD y en su propio namespace (`grafana-gitsync`). Grafana (con Git Sync activado: `provisioning = true`), sus orgs y sus datasources se gestionan en el repo del stack, no aquí.
+
+| Repo del stack (Grafana, Mimir, Loki…) | Este repo |
+|---|---|
+| Instala Grafana y activa Git Sync | Paneles por cliente (`master/`, `tenants/`) |
+| Orgs y datasources (aprovisionamiento) | Chart con un Job por cliente que conecta su Git Sync |
+| Su Application de ArgoCD y su namespace | Su Application (`grafana-gitsync`) y su namespace (`grafana-gitsync`) |
+ El chart `deploy/chart/grafana-gitsync` lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true`. Cada Job:
 
 1. Espera a Grafana, detecta la versión de la API de provisioning y aborta si Grafana sigue en legacy storage.
 2. Comprueba que la org existe. Namespace: `default` para la org 1 y `org-<id>` para el resto.

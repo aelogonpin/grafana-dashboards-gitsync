@@ -5,6 +5,7 @@ Historial de cambios que afectan al uso del repo, del más reciente al más anti
 ## 2026-10-24
 
 ### Cambiado
+- El ejemplo de Application usa un namespace propio (`grafana-gitsync`, con `CreateNamespace=true`): el sistema de paneles es independiente del stack de monitorización.
 - El Job de Git Sync pasa a ser un **chart de Helm** (`deploy/chart/grafana-gitsync`) en lugar de kustomize. Lee `master/config.yaml` como fichero de values y crea **un Job por cliente** con `gitSync: true` (hook `post-install,post-upgrade`, PostSync en ArgoCD), así que en ArgoCD se ve el estado de cada cliente por separado.
 - `gitsync-sync.sh` se mueve a `deploy/chart/grafana-gitsync/files/` y admite dos modos: un cliente (`TENANT`, `ORG_ID`, `REPO_PATH`, `REPO_URL`, `REPO_BRANCH`) o todos (`TENANTS_FILE`, usado por el CronJob y por `dev/`).
 
