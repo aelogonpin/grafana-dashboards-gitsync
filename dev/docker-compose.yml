@@ -89,6 +89,7 @@ services:
       GRAFANA_USER: admin
       GRAFANA_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GIT_TOKEN_USER: ${GIT_TOKEN_USER:-}
       TENANTS_FILE: /work/tenants.json
       DRY_RUN: ${DRY_RUN:-false}
     volumes:

@@ -11,6 +11,7 @@ grafana:
   userKey: grafana-user
   passwordKey: grafana-password
   githubTokenKey: github-token
+  gitUserKey: git-user
 
 gitSync:
   target: folder              # folder: cada cliente en su carpeta | instance: toda la org

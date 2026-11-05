@@ -2,6 +2,13 @@
 
 Historial de cambios que afectan al uso del repo, del más reciente al más antiguo. Añade una entrada por cada cambio visible: nuevos scripts, cambios de comportamiento o de documentación importantes.
 
+## 2026-11-05
+
+### Cambiado
+- El Job crea las conexiones de Git Sync con el tipo `git` (Git puro): solo necesita URL, usuario y token, y sirve para cualquier servidor Git. El Secret `grafana-gitsync` necesita la clave nueva `git-user`. Sin webhooks: los cambios llegan por el intervalo de sincronización y las PR se abren a mano.
+- `render.sh` funciona con el bash 3.2 de macOS.
+- Las instrucciones para instalar `yq` (en `render.sh`, el quick start y la skill `probar-en-local`) eligen el binario según el sistema y la arquitectura: sirven en Linux y macOS.
+
 ## 2026-10-24
 
 ### Decisiones

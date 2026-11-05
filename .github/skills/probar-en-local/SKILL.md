@@ -11,9 +11,10 @@ Todo desde la raíz del repo. Por defecto, Grafana está en http://localhost:300
 
 ## Levantarlo en una máquina nueva
 
-1. Herramientas: Docker con `docker compose`, git, gh, jq y **yq v4 de mikefarah**. Ubuntu trae en `/usr/bin/yq` otro yq (el de Python, `yq --version` dice `0.0.0`) que **no sirve**; `render.sh` lo detecta y lo avisa. Instala el bueno en `~/.local/bin`, que va antes en el PATH:
+1. Herramientas: Docker con `docker compose`, git, gh, jq y **yq v4 de mikefarah**. Ubuntu trae en `/usr/bin/yq` otro yq (el de Python, `yq --version` dice `0.0.0`) que **no sirve**; `render.sh` lo detecta y lo avisa. En macOS basta con `brew install yq`. En Linux, o en macOS sin Homebrew, instala el bueno en `~/.local/bin`, que va antes en el PATH:
    ```bash
-   mkdir -p ~/.local/bin && curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && chmod +x ~/.local/bin/yq
+   os=$(uname -s | tr '[:upper:]' '[:lower:]'); arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+   mkdir -p ~/.local/bin && curl -sSL -o ~/.local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_${os}_${arch}" && chmod +x ~/.local/bin/yq
    export PATH="$HOME/.local/bin:$PATH"
    ```
 2. Repo y sesión: `gh auth login --web --git-protocol https --scopes repo,workflow && gh auth setup-git && gh repo clone aelogonpin/grafana-dashboards-gitsync`.

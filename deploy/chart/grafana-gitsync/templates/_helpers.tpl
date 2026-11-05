@@ -27,6 +27,8 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
       valueFrom: { secretKeyRef: { name: {{ $root.Values.grafana.existingSecret }}, key: {{ $root.Values.grafana.passwordKey }} } }
     - name: GITHUB_TOKEN
       valueFrom: { secretKeyRef: { name: {{ $root.Values.grafana.existingSecret }}, key: {{ $root.Values.grafana.githubTokenKey }} } }
+    - name: GIT_TOKEN_USER
+      valueFrom: { secretKeyRef: { name: {{ $root.Values.grafana.existingSecret }}, key: {{ $root.Values.grafana.gitUserKey }} } }
     - { name: SYNC_TARGET, value: {{ $root.Values.gitSync.target | quote }} }
     - { name: SYNC_INTERVAL, value: {{ $root.Values.gitSync.intervalSeconds | quote }} }
     - { name: WORKFLOWS, value: {{ $root.Values.gitSync.workflows | toJson | quote }} }

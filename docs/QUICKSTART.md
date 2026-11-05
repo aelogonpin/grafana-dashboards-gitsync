@@ -18,13 +18,15 @@ Necesitas **Docker** (con `docker compose`), **git**, **gh** (la CLI de GitHub),
 docker compose version && git --version && gh --version && jq --version && yq --version
 ```
 
-Si falta `yq` (tiene que ser la v4 de *mikefarah*):
+Si falta `yq` (tiene que ser la v4 de *mikefarah*), en macOS basta con `brew install yq`. En Linux o macOS sin Homebrew:
 
 ```bash
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
 mkdir -p ~/.local/bin
-curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+curl -sSL -o ~/.local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_${os}_${arch}"
 chmod +x ~/.local/bin/yq
-export PATH="$HOME/.local/bin:$PATH"     # añádelo también a tu ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"     # añádelo también a tu ~/.bashrc (~/.zshrc en macOS)
 yq --version                              # debe decir v4.x
 ```
 

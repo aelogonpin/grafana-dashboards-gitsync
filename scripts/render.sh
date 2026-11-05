@@ -6,7 +6,7 @@
 #   scripts/render.sh           genera y escribe en el repo
 #   scripts/render.sh --check   genera en un directorio temporal y solo valida (para PRs)
 #
-# Requiere: bash 4+, yq (mikefarah v4), jq, rsync.
+# Requiere: bash, yq (mikefarah v4), jq, rsync.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,12 +27,20 @@ for bin in yq jq rsync; do
 done
 # Hay dos programas llamados yq; este script necesita el de mikefarah (v4), no el de Python.
 if ! yq --version 2>&1 | grep -q 'mikefarah'; then
+  # El binario depende del sistema (linux, darwin) y de la arquitectura (amd64, arm64).
+  yq_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  case "$(uname -m)" in
+    x86_64) yq_arch=amd64 ;;
+    aarch64|arm64) yq_arch=arm64 ;;
+    *) yq_arch="$(uname -m)" ;;
+  esac
   cat >&2 <<EOF
 El 'yq' del PATH ($(command -v yq): $(yq --version 2>&1 | head -1)) no es el de mikefarah v4.
 Instálalo en ~/.local/bin (va antes que /usr/bin en el PATH):
   mkdir -p ~/.local/bin
-  curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+  curl -sSL -o ~/.local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_${yq_os}_${yq_arch}
   chmod +x ~/.local/bin/yq && hash -r && yq --version
+En macOS también vale: brew install yq
 EOF
   exit 2
 fi
@@ -43,7 +51,9 @@ fi
 echo "== Validando $CONFIG"
 yq -e '.tenants | type == "!!map"' "$CONFIG" >/dev/null 2>&1 || { echo "ERROR: 'tenants' no existe o no es un mapa" >&2; exit 1; }
 
-mapfile -t TENANTS < <(yq -r '.tenants | keys | .[]' "$CONFIG")
+# Sin mapfile: macOS trae bash 3.2.
+TENANTS=()
+while IFS= read -r t; do TENANTS+=("$t"); done < <(yq -r '.tenants | keys | .[]' "$CONFIG")
 [[ ${#TENANTS[@]} -gt 0 ]] || { echo "ERROR: no hay clientes en el config" >&2; exit 1; }
 
 dup_orgs=$(yq -r '.tenants[].orgId' "$CONFIG" | sort | uniq -d)

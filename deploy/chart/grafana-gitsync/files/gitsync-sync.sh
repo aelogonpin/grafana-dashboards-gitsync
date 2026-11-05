@@ -13,6 +13,7 @@
 #   GRAFANA_USER       usuario administrador del servidor
 #   GRAFANA_PASSWORD
 #   GITHUB_TOKEN       token con acceso al repo (lo guarda Grafana como secreto)
+#   GIT_TOKEN_USER     usuario dueño del token (git push/pull por HTTPS)
 #   SYNC_TARGET        folder (por defecto) | instance
 #   SYNC_INTERVAL      segundos entre sincronizaciones (60)
 #   WORKFLOWS          JSON: ["branch"] = cambios desde la UI por PR (por defecto); [] = solo lectura
@@ -22,6 +23,7 @@ set -eu
 
 : "${GRAFANA_URL:?}" "${GRAFANA_USER:?}" "${GRAFANA_PASSWORD:?}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+GIT_TOKEN_USER="${GIT_TOKEN_USER:-}"
 SYNC_TARGET="${SYNC_TARGET:-folder}"
 SYNC_INTERVAL="${SYNC_INTERVAL:-60}"
 WORKFLOWS="${WORKFLOWS:-[\"branch\"]}"
@@ -66,6 +68,7 @@ if [ "$code" = "200" ] && [ "$(jq -r '.legacyStorage // false' "$TMP")" = "true"
   exit 1
 fi
 [ -n "$GITHUB_TOKEN" ] || log "AVISO: GITHUB_TOKEN vacío; Grafana puede rechazar la conexión."
+[ -n "$GIT_TOKEN_USER" ] || log "AVISO: GIT_TOKEN_USER vacío; Grafana puede rechazar la conexión."
 
 # Crea la conexión de un cliente si falta. Devuelve 0 (creado/ya existe/dry-run) o 1 (error).
 # Deja en RESULT: creado | existe | dry-run | error
@@ -91,15 +94,16 @@ ensure_repository() {
 
   body=$(jq -n \
     --arg v "provisioning.grafana.app/$VERSION" --arg name "$repo" --arg ns "$ns" \
-    --arg title "$name" --arg url "$repo_url" --arg branch "$branch" --arg path "$path" \
+    --arg title "$name" --arg url "${repo_url%.git}.git" --arg branch "$branch" --arg path "$path" \
+    --arg user "$GIT_TOKEN_USER" \
     --arg target "$SYNC_TARGET" --argjson interval "$SYNC_INTERVAL" \
     --argjson workflows "$WORKFLOWS" --arg token "$GITHUB_TOKEN" '
     {
       apiVersion: $v, kind: "Repository",
       metadata: { name: $name, namespace: $ns },
       spec: {
-        title: $title, type: "github",
-        github: { url: $url, branch: $branch, path: $path },
+        title: $title, type: "git",
+        git: { url: $url, branch: $branch, path: $path, tokenUser: $user },
         sync: { enabled: true, target: $target, intervalSeconds: $interval },
         workflows: $workflows
       }
