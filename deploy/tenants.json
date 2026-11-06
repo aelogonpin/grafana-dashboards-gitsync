@@ -19,7 +19,7 @@
     {
       "name": "cliente-c",
       "orgId": 3,
-      "gitSync": false,
+      "gitSync": true,
       "path": "tenants/cliente-c"
     }
   ]

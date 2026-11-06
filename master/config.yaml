@@ -24,7 +24,7 @@ tenants:
       - alertas
   cliente-c:
     orgId: 3
-    gitSync: false # aún no se conecta
+    gitSync: true
     general:
       - aplicacion/metrics/api.json # también se puede elegir un fichero suelto
       - alertas
