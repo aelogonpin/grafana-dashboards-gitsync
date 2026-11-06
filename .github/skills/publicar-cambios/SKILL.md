@@ -7,6 +7,9 @@ description: Lista de comprobación para hacer commit y push en este repo públi
 
 El repo es **público**. Un dato de producción subido queda en el historial, en las PRs y en los logs de las Actions; para limpiarlo hubo que **borrar y recrear el repo**. No se repite.
 
+
+Commits y PRs sin líneas de coautoría ni menciones a herramientas de IA.
+
 ## 1. Antes del commit
 
 ```bash

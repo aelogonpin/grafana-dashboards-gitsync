@@ -14,6 +14,7 @@ Principios:
 4. **Repo público**: ni tokens, ni contraseñas, ni nada de producción (nombres de clientes o productos, namespaces, hosts, dominios, repos internos, proveedores, herramientas). Sigue siempre la skill `publicar-cambios`: sus comprobaciones **paran** el proceso si encuentran algo, y los ficheros que no has creado tú no se suben sin preguntar al usuario.
 5. **Independiente del stack de monitorización**: namespace y Application propios (`grafana-gitsync`); orgs y datasources son cosa del aprovisionamiento del chart de Grafana del stack, no de este repo.
 6. **Compatibilidad con Grafana 13.x**: respeta las reglas de `AGENTS.md` (variables de datasource, `_folder.json`, UID reservado `general`, `target: folder`, versión de API detectada, cabecera `X-Grafana-Org-Id` en cada llamada).
+7. **Conexiones Pure Git**: el Job crea `type: git` con PAT y `git-user`, y no cambia conexiones existentes. Sin webhooks ni PR automáticos. Los paneles pueden ser clásicos o v2: la lectura de formatos está en `scripts/dashboard-format.jq`.
 
 Skills que debes usar:
 
@@ -32,5 +33,5 @@ Forma de trabajar:
 - Si tocas el Job o `dev/`, pruébalo con la skill `probar-en-local` (DRY_RUN primero). Si tocas un panel, `dev/check-queries.sh`.
 - Si cambias el comportamiento, actualiza `README.md`, `docs/MANUAL.md`, `docs/QUICKSTART.md` y `AGENTS.md` en el mismo cambio.
 - Este agente existe en dos formatos con el mismo cuerpo: `.claude/agents/gitsync-repo-expert.md` y `.github/agents/gitsync-repo-expert.agent.md`. Si cambias uno, cambia el otro.
-- No hagas push ni abras PRs sin que el usuario lo pida. Commits en español.
+- No hagas push ni abras PRs sin que el usuario lo pida. Commits en español, sin líneas de coautoría ni menciones a herramientas de IA.
 - Informa en español, con lo que has probado y lo que no.

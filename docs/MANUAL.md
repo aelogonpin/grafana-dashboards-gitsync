@@ -86,13 +86,13 @@ Los clientes que tengan `kubernetes` en su config lo verán solos.
 
 ### Receta 5: crear un panel solo para un cliente
 
-1. Guarda el JSON en `tenants/<cliente>/custom/` (puedes hacer subcarpetas).
+1. Pásalo por `scripts/convert-dashboard.sh` con destino en `tenants/<cliente>/custom/` (puedes hacer subcarpetas). Admite cualquier formato de export de Grafana, incluido el v2 (`apiVersion: dashboard.grafana.app/v2`).
 2. Ponle un `uid` que ese cliente no tenga ya.
 3. Push. Solo ese cliente lo verá, en la carpeta "Paneles propios".
 
 En los paneles propios **sí** puedes usar el UID real de un datasource, pero es mejor usar las variables.
 
-También se puede crear desde Grafana: guardas el panel en la carpeta "Paneles propios" del cliente y Grafana abre una PR en GitHub. Cuando la aceptas, queda en el repo.
+También se puede crear desde Grafana, si la conexión tiene `workflows: ["branch"]`: al guardar en "Paneles propios" del cliente se crea una rama. Con Pure Git, el PR lo abres tú.
 
 ### Receta 6: añadir un cliente nuevo
 
@@ -165,3 +165,15 @@ Abre **http://localhost:3001** (usuario `admin`, contraseña `admin`) y cambia d
 | **Job** | un programa que se ejecuta una vez y termina; aquí crea las conexiones de Git Sync |
 | **Tenant** | cliente |
 | **UID** | el DNI de un panel o carpeta; no puede repetirse dentro de una org |
+
+## Formatos de panel y Pure Git
+
+`scripts/convert-dashboard.sh` admite cualquier export de Grafana, clásico o v2, en JSON o YAML. Un panel v2 sigue en v2. Pásalo siempre por el script antes de subirlo: `render.sh` rechaza un export v2 sin limpiar.
+
+Si el panel ya existe en Grafana con el mismo UID y sin gestor, bórralo antes de sincronizar: Git Sync no se hace cargo de él.
+
+Las conexiones son Pure Git:
+
+- Grafana consulta el repo cada 60 s, sin webhooks.
+- Al guardar desde la web se crea una rama si la conexión tiene `workflows: ["branch"]`; el PR se abre a mano.
+- El Job solo crea conexiones. Si cambian el token, la URL o la rama, hay que borrar la conexión y lanzar un *Sync*.

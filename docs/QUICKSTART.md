@@ -45,13 +45,13 @@ Si vas a trabajar en tu propia copia, haz antes un *fork* y clona el tuyo.
 
 ## Paso 3. Crear el token para Grafana
 
-Grafana necesita un token para leer el repo y proponer cambios por PR.
+Grafana necesita un token para leer el repo y crear ramas. Las conexiones son Pure Git: usan URL, usuario y token, sin webhooks ni PR automáticos.
 
 1. Ve a https://github.com/settings/personal-access-tokens/new
 2. Rellena:
    - **Expiration**: 30 días (es para pruebas).
    - **Repository access**: *Only select repositories* → `grafana-dashboards-gitsync`.
-   - **Repository permissions**: *Contents*, *Pull requests* y *Webhooks* en **Read and write** (*Metadata* se pone solo).
+   - **Repository permissions**: *Contents* en **Read and write** (*Metadata* se pone solo). En un token clásico, el permiso `repo`.
 3. Pulsa **Generate token** y cópialo.
 4. Guárdalo en `dev/.env`. Ese fichero está en `.gitignore` y nunca se sube:
 

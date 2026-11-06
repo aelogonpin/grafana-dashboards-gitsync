@@ -18,6 +18,13 @@ CHECK_ONLY=false
 # Datasources que pueden ir con UID fijo en general/ (los internos de Grafana).
 ALLOWED_DS_UIDS='["grafana","-- Grafana --","-- Mixed --","-- Dashboard --"]'
 
+# jq con las funciones de scripts/dashboard-format.jq (admite todos los formatos de dashboard).
+fmtjq() {
+  local args=()
+  while [[ "${1:-}" == --* ]]; do args+=("$1" "$2" "$3"); shift 3; done
+  jq -r -L "$ROOT/scripts" ${args[@]+"${args[@]}"} "include \"dashboard-format\"; $1" "$2"
+}
+
 errors=0
 err()  { echo "ERROR: $*" >&2; errors=$((errors + 1)); }
 info() { echo "  $*"; }
@@ -172,26 +179,30 @@ for t in "${TENANTS[@]}"; do
   while IFS= read -r -d '' f; do
     rel="${f#"$WORK"/}"
     if ! jq empty "$f" 2>/dev/null; then err "$rel: JSON no válido"; continue; fi
-    uid=$(jq -r '.uid // empty' "$f")
-    title=$(jq -r '.title // empty' "$f")
-    [[ -n "$uid" ]]   || err "$rel: falta 'uid'"
-    [[ -n "$title" ]] || err "$rel: falta 'title'"
+    format=$(fmtjq 'dash_format' "$f")
+    if [[ "$format" == "v2-spec" ]]; then
+      err "$rel: spec v2 sin apiVersion ni metadata; pásalo por scripts/convert-dashboard.sh"
+      continue
+    fi
+    uid=$(fmtjq 'dash_uid' "$f")
+    title=$(fmtjq 'dash_title' "$f")
+    [[ -n "$uid" ]]   || err "$rel: falta el uid ('uid' o 'metadata.name'); pásalo por scripts/convert-dashboard.sh"
+    [[ -n "$title" ]] || err "$rel: falta el título ('title' o 'spec.title')"
+    leftovers=$(fmtjq 'server_metadata | join(", ")' "$f")
+    [[ -z "$leftovers" ]] || err "$rel: metadata con datos del servidor ($leftovers); pásalo por scripts/convert-dashboard.sh"
     [[ -z "$uid" || "$uid" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || err "$rel: uid '$uid' no válido (máx. 40, letras, números, - y _)"
     [[ -n "$uid" ]] && echo "$uid $rel" >> "$uids_file"
 
     # En general/ no se permiten UIDs de datasource fijos: solo variables (${ds_mimir}, ${ds_loki}...).
     if [[ "$rel" == tenants/*/general/* ]]; then
-      bad=$(jq -r --argjson ok "$ALLOWED_DS_UIDS" '
-        [.. | objects | select(has("datasource")) | .datasource | objects | .uid // empty
-         | select(type == "string" and (startswith("$") | not) and (. as $u | $ok | index($u) | not))]
-        | unique | join(", ")' "$f")
+      bad=$(fmtjq --argjson ok "$ALLOWED_DS_UIDS" '
+        ds_refs | map(select((startswith("$") | not) and (. as $u | $ok | index($u) | not))) | join(", ")' "$f")
       [[ -z "$bad" ]] || err "$rel: datasource con UID fijo ($bad); usa una variable como \${ds_mimir}"
-      missing=$(jq -r '
-        ([.templating.list[]?.name]) as $vars
-        | [.. | objects | select(has("datasource")) | .datasource | objects | .uid // empty
-           | select(type == "string" and startswith("$")) | ltrimstr("${") | ltrimstr("$") | rtrimstr("}")]
+      missing=$(fmtjq '
+        dash_vars as $vars
+        | ds_refs | map(select(startswith("$")) | ltrimstr("${") | ltrimstr("$") | rtrimstr("}") | split(":")[0])
         | unique | map(select(. as $v | $vars | index($v) | not)) | join(", ")' "$f")
-      [[ -z "$missing" ]] || err "$rel: usa variables sin definir en templating ($missing)"
+      [[ -z "$missing" ]] || err "$rel: usa variables sin definir ($missing)"
     fi
   done < <(find "$base" -name '*.json' ! -name _folder.json -print0)
 

@@ -7,7 +7,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - `master/general/`: paneles comunes, con jerarquía libre. `_folder.json` en cada carpeta solo aporta el título.
 - `master/config.yaml`: única fuente de verdad. Por cliente: `orgId`, `gitSync`, `general` (rutas o ficheros) y `exclude`.
 - `scripts/render.sh`: lógica determinista (bash + yq v4 + jq + rsync, **sin IA**). Genera `tenants/<cliente>/general/` (con `rsync --delete`), crea los `_folder.json` y `deploy/tenants.json`, y valida. `--check` no escribe nada.
-- `scripts/convert-dashboard.sh <export.json> <uid> <destino.json> ["<título carpeta>"]`: convierte un export de Grafana (datasources → variables, uid fijo) y, opcionalmente, titula la carpeta. `scripts/folder-title.sh <carpeta> "<título>"`: escribe el `_folder.json` con el título visible (UID derivado de la ruta).
+- `scripts/convert-dashboard.sh <export.json> <uid> <destino.json> ["<título carpeta>"]`: convierte un export de Grafana (datasources → variables, uid fijo) y, opcionalmente, titula la carpeta. `scripts/folder-title.sh <carpeta> "<título>"`: escribe el `_folder.json` con el título visible (UID derivado de la ruta). Admite formato clásico, recurso v1 y v2 (JSON o YAML); el v2 se queda en v2.
 - `.github/workflows/render.yml`: en push a `main` ejecuta render y hace commit del bot. `validate.yml`: en PRs ejecuta `--check` y rechaza cambios en `tenants/*/general/`.
 - `deploy/chart/grafana-gitsync/`: **chart de Helm** (nada de kustomize, decisión del usuario). Lee `master/config.yaml` como values y crea **un Job por cliente** con `gitSync: true` (hook `post-install,post-upgrade`, PostSync en ArgoCD) y un CronJob opcional. El script `files/gitsync-sync.sh` (sh + curl + jq, idempotente) crea el `Repository` `gitsync-<cliente>` en el namespace `default` (org 1) u `org-<id>` solo si falta, con `path: tenants/<cliente>` y `target: folder`; admite un cliente (`TENANT`, `ORG_ID`…) o todos (`TENANTS_FILE`, usado por el CronJob y por `dev/`). Ejemplo de Application con dos fuentes: `deploy/argocd/application.example.yaml`. **Las conexiones se crean siempre desde el clúster, nunca desde GitHub Actions** (requisito del usuario). Este sistema es **independiente del repo del stack de monitorización** (requisito del usuario): su propia Application y su propio namespace (`grafana-gitsync`); Grafana, sus orgs y sus datasources se gestionan en el repo del stack.
 - `dev/`: Grafana 13.2.4 + Postgres + Mimir 2.17 y Loki 3.5 multi-tenant (`X-Scope-OrgID` = nombre del cliente) + Prometheus/node-exporter + generador de logs realistas de una tienda online (logfmt). Grafana en http://localhost:3001 (admin/admin). Puerto, contraseña, URL y token, en `dev/.env` (plantilla: `dev/.env.example`). Herramientas: `dev/status.sh`, `dev/check-isolation.sh` y `dev/check-queries.sh <panel.json> [org]`.
@@ -19,7 +19,7 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - `general` es el UID reservado de la carpeta raíz de Grafana: nunca usarlo. Las carpetas generadas llevan prefijo `gen-`, y las de custom, `custom-`.
 - Grafana 13.2 pide `_folder.json` (`kind: Folder`, `metadata.name` = UID y `spec.title`) en cada carpeta; sin él, el UID cambia en cada sync.
 - Grafana 13 solo permite por defecto `target: folder` (no `instance`).
-- El token de GitHub necesita *Contents*, *Pull requests* y *Webhooks* en **Read and write**; sin escritura, Git Sync da `write permission denied` aunque los workflows sean `["branch"]`.
+- Las conexiones son **Pure Git** (`type: git`): URL HTTPS, rama, ruta, `tokenUser` y un PAT con permiso `repo` (con SSO autorizado si la organización lo exige). Sin webhooks: Grafana consulta el repo cada `intervalSeconds`. Sin PR automáticos: con `workflows: ["branch"]`, guardar desde la web crea una rama y el PR se abre a mano. La URL con `http://` y token se rechaza; un servidor con IP privada necesita `[provisioning] allowed_git_urls`.
 - Si un datasource provisionado apunta a una org que no existe, Grafana 13 no arranca.
 - Añadir `uid` a un datasource que ya existe falla (`data source not found`); habría que borrarlo y recrearlo. Por eso se usan variables.
 - Tras una sincronización fallida puede hacer falta un pull completo: `POST .../repositories/<nombre>/jobs` con `{"action":"pull","pull":{"incremental":false}}`.
@@ -41,12 +41,37 @@ Repo **público** de paneles de Grafana multi-cliente sincronizados con Git Sync
 - Orgs y datasources: los crea el **aprovisionamiento del chart de Grafana** en el repo del stack, no este repo (decisión del usuario; un Job de orgs se descartó). La org debe existir antes que sus datasources provisionados.
 - Para mirar el estado en Grafana desde el clúster usa `kubectl port-forward` y curl local; `kubectl run` con credenciales en `--env` las deja en los logs del contenedor.
 
+## Git Sync y paneles: lo aprendido en despliegue
+
+- **Qué hace el Job:** espera a Grafana, comprueba que no está en legacy y que la org existe, y crea `gitsync-<cliente>` si falta. Ruta fija `tenants/<cliente>`; rama `repo.branch`. No crea orgs, datasources ni paneles: los paneles los carga Grafana.
+- **El Job compara por nombre y nunca cambia una conexión existente.** Si cambian el token, la URL, la rama o el tipo, hay que borrar la conexión y lanzar un *Sync*. Al borrarla se van sus paneles gestionados, que vuelven desde el repo. Una conexión con otro nombre no se detecta: conviviría con la nueva.
+- **Cuándo corre:** es un hook PostSync. Corre en cada sync de ArgoCD: al cambiar `config.yaml` o el chart, o con *Sync* manual. Cambiar solo paneles no lo lanza. `gitSync: false` no borra la conexión.
+- **Secret `grafana-gitsync`:** 4 claves obligatorias: `grafana-user`, `grafana-password`, `github-token` (el PAT, aunque no sea GitHub) y `git-user`. Si falta una, el pod queda en `CreateContainerConfigError` y ArgoCD en `Running`; al añadirla, arranca solo.
+- **Secret de repo en ArgoCD:** `url` completa con `https://` y `.git`, idéntica a los `repoURL`, y sin `enableOCI`. Un booleano mal escrito da `strconv.ParseBool`. Las dos fuentes de la Application usan una sola credencial: la segunda (`ref: paneles`) solo sirve para leer `master/config.yaml`.
+- **Formatos de panel:** `convert-dashboard.sh` admite clásico, envuelto, v1, v2 y spec v2 suelto, en JSON o YAML. El v2 sigue en v2: `metadata` queda solo con `name` y las consultas y variables adhoc pasan a `${ds_mimir}` / `${ds_loki}` según su `group`. Grafana valida el v2 con su esquema.
+- **Git Sync no se hace cargo de un panel sin gestor con el mismo UID:** hay que borrarlo de Grafana antes de sincronizar. Conserva el UID del export salvo que el usuario diga otra cosa.
+- **Enlaces internos:** llevan el UID del panel; `convert-dashboard.sh` avisa si apuntan a otro. Compruébalo antes de subir.
+- **`/^Mimir/` y `/^Loki/`:** en una org con varios datasources del mismo tipo puede resolverse a otro distinto del que tenía el panel. Revísalo.
+- **Admin de Grafana:** OIDC no quita el login local. `identity.disabled` significa que el admin está deshabilitado; `Access denied` en una org, que no es miembro de ella. Mira el log de Grafana antes de culpar a la contraseña.
+- **Chart de Grafana:** fija la versión exacta. `~14` puede traer una versión de Grafana no ensayada.
+
+## Qué hacer según lo que pida el usuario
+
+| Si pide... | Usa |
+|---|---|
+| Meter un panel exportado (cualquier formato) en un cliente | skill `nuevo-panel`: busca el fichero, conviértelo, `render.sh --check`, y resume los avisos |
+| Conectar un cliente o desplegar Git Sync en un clúster | skill `desplegar-en-kubernetes` |
+| Añadir un cliente o cambiar sus carpetas | skill `nuevo-cliente` |
+| Subir cambios | skill `publicar-cambios` |
+| Revisar paneles antes de subir | agente `revisor-paneles` |
+| Un Job falla o una conexión no sincroniza | skill `desplegar-en-kubernetes`, sección Diagnóstico |
+
 ## Cómo trabajar aquí
 
 - Tras cualquier cambio en `master/`, `tenants/*/custom/` o `scripts/`, ejecuta `scripts/render.sh --check` (necesita `yq` v4 de mikefarah en el PATH).
 - No edites `tenants/*/general/` ni `deploy/tenants.json` a mano: se generan.
 - Nunca subas secretos ni nada de producción (nombres de clientes o productos, namespaces, hosts, repos internos): el repo es público. Antes de cada commit, sigue la skill `publicar-cambios`. El token va en `dev/.env` (ignorado por git).
-- Commits en español; termina el mensaje con la línea `Co-Authored-By` que indique el sistema.
+- Commits en español, sin líneas de coautoría ni menciones a herramientas de IA.
 - Manual para usuarios: `docs/MANUAL.md`; arranque desde cero: `docs/QUICKSTART.md`; historial de cambios: `CHANGELOG.md` (añade una entrada por cada cambio que afecte al uso).
 - Skills (estándar Agent Skills, una sola copia en `.github/skills/`; `.claude/skills` es un enlace simbólico):
   - `probar-en-local`: levantar y depurar `dev/`, también en otra máquina o desde el móvil.

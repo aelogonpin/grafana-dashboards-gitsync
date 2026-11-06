@@ -133,9 +133,9 @@ helm upgrade --install grafana-gitsync deploy/chart/grafana-gitsync -n <namespac
 | Value | Por defecto | Descripción |
 |---|---|---|
 | `grafana.url` | `http://grafana.grafana.svc:80` | Service de Grafana visto desde el clúster (con sub-path si lo usa) |
-| `grafana.existingSecret` | `grafana-gitsync` | Secret con `grafana-user`, `grafana-password` y `github-token` |
+| `grafana.existingSecret` | `grafana-gitsync` | Secret con `grafana-user`, `grafana-password`, `github-token` (el PAT) y `git-user` |
 | `gitSync.target` | `folder` | `folder`: el cliente sincroniza en su carpeta; `instance`: toda la org |
-| `gitSync.workflows` | `["branch"]` | cambios desde la UI por PR; `[]` = solo lectura |
+| `gitSync.workflows` | `["branch"]` | al guardar desde la UI crea una rama; el PR se abre a mano. `[]` = solo lectura |
 | `image.installTools` | `true` | instala curl y jq al arrancar (necesita internet); `false` con una imagen que ya los traiga |
 | `cronjob.enabled` | `false` | CronJob que revisa todos los clientes periódicamente y recrea conexiones borradas |
 | `job.dryRun` | `false` | solo informa |
