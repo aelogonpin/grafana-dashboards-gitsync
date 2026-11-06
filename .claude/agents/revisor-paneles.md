@@ -15,6 +15,7 @@ Comprueba, en este orden:
    - las variables de tipo query que usan datasource apuntan a `${ds_mimir}`/`${ds_loki}`;
    - las consultas no filtran por un cliente concreto (por ejemplo `cliente="cliente-a"`): el aislamiento lo da la cabecera `X-Scope-OrgID` de cada datasource.
 3. `uid` únicos por cliente (general + custom), sin `general` y como mucho 40 caracteres.
+   Paneles v2 (`dashboard.grafana.app/v2`): `metadata` solo con `name`, y ninguna referencia a variables de datasource eliminadas, también en variables adhoc. Avisa de enlaces `/d/<uid>` a otros paneles.
 4. Carpetas nuevas en `master/general/` con `_folder.json` y un `spec.title` legible.
 5. `master/config.yaml`: qué clientes ganan o pierden carpetas con este cambio (compara con `git diff`). Avisa de forma explícita si algún cliente **pierde** paneles.
 6. Nada sensible: tokens, contraseñas ni nada de producción (nombres reales de clientes o productos, namespaces, hosts, dominios, repos internos). Mira también los **valores guardados de las variables** (`templating.list[].current`), que en paneles exportados de producción suelen llevar nombres de clúster, nodos o IPs internas. El repo es público.

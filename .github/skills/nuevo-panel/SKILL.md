@@ -33,6 +33,26 @@ Si el panel viene de producción, revisa los **valores guardados de sus variable
 
 Si `convert-dashboard.sh` avisa de datasources con UID fijo de otros tipos, pregunta al usuario si añadir una variable para ese tipo (mismo patrón: `type: datasource`, `query: <tipo>`, `regex: /^<Prefijo>/`, `hide: 2`).
 
+### Formatos de export
+
+`convert-dashboard.sh` acepta JSON o YAML en cualquiera de estas formas. Pásalo siempre por el script: un export v2 sin convertir falla en `render.sh`.
+
+| Entrada | Cómo reconocerla | Resultado |
+|---|---|---|
+| Clásico | `uid`, `title`, `panels` | clásico |
+| Envuelto | `{"dashboard": {...}}` | según lo que lleve dentro |
+| Recurso v1 | `apiVersion: dashboard.grafana.app/v1...` | clásico |
+| Recurso v2 | `apiVersion: dashboard.grafana.app/v2...`, `spec.elements` | v2 |
+| Spec v2 suelto | `elements` sin `apiVersion` | v2 |
+
+Después de convertir:
+
+- **UID:** conserva el del export (`metadata.name` en v2) salvo que el usuario diga otra cosa. Si ese panel sigue en Grafana sin gestor con el mismo UID, avisa: hay que borrarlo antes de sincronizar.
+- **Lee los avisos.** Enlaces a otros UIDs: comprueba que esos paneles existen. Datasources que quedan: en v2, comprueba que `ds_refs` no conserva variables eliminadas.
+- **Datasource:** si el original elegía uno concreto y la org tiene varios, `/^Mimir/` puede resolverse a otro. Avisa.
+- **Validación extra, si hay un Grafana 13 de pruebas:** `POST /apis/dashboard.grafana.app/v2/namespaces/<ns>/dashboards?dryRun=All` con el JSON. No guarda nada.
+- **No hagas commit ni push** salvo que el usuario lo pida: lo que llega a la rama de `repo.branch` lo carga Grafana en un minuto.
+
 ## 3. Carpeta nueva en master
 
 Si creas una carpeta nueva, define su título visible en Grafana (escribe su `_folder.json`; en `master/` el UID lo reasigna render.sh y en `custom/` se deriva de la ruta):

@@ -4,6 +4,10 @@ Historial de cambios que afectan al uso del repo, del más reciente al más anti
 
 ## 2026-11-06
 
+### Documentación
+- Skills, agentes y guías al día con Pure Git, el Secret de 4 claves, cuándo corre el Job y los formatos de panel. `AGENTS.md` añade qué hacer según lo que pida el usuario.
+- Commits y PRs sin líneas de coautoría.
+
 ### Añadido
 - `scripts/dashboard-format.jq`: funciones comunes para leer cualquier formato de dashboard.
 

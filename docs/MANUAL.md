@@ -165,3 +165,15 @@ Abre **http://localhost:3001** (usuario `admin`, contraseña `admin`) y cambia d
 | **Job** | un programa que se ejecuta una vez y termina; aquí crea las conexiones de Git Sync |
 | **Tenant** | cliente |
 | **UID** | el DNI de un panel o carpeta; no puede repetirse dentro de una org |
+
+## Formatos de panel y Pure Git
+
+`scripts/convert-dashboard.sh` admite cualquier export de Grafana, clásico o v2, en JSON o YAML. Un panel v2 sigue en v2. Pásalo siempre por el script antes de subirlo: `render.sh` rechaza un export v2 sin limpiar.
+
+Si el panel ya existe en Grafana con el mismo UID y sin gestor, bórralo antes de sincronizar: Git Sync no se hace cargo de él.
+
+Las conexiones son Pure Git:
+
+- Grafana consulta el repo cada 60 s, sin webhooks.
+- Al guardar desde la web se crea una rama si la conexión tiene `workflows: ["branch"]`; el PR se abre a mano.
+- El Job solo crea conexiones. Si cambian el token, la URL o la rama, hay que borrar la conexión y lanzar un *Sync*.
