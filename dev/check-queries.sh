@@ -23,11 +23,11 @@ PROM=$(j "$ds" '[.[] | select(.type == "prometheus")][0].uid // empty')
 LOKI=$(j "$ds" '[.[] | select(.type == "loki")][0].uid // empty')
 
 ROWS=$(mktemp); trap 'rm -f "$ROWS"' EXIT
-jq -c '.panels[]? | select(.targets) | . as $p | .targets[] | select(.expr) |
-       {t: $p.title, typ: $p.type, ds: ((.datasource // $p.datasource).type // "prometheus"), e: .expr}' "$F" > "$ROWS"
+LIB="$(dirname "$0")/../scripts"   # dashboard-format.jq: entiende el formato clásico y el v2
+jq -c -L "$LIB" 'include "dashboard-format"; dash_queries' "$F" > "$ROWS"
 
 fail=0
-echo "$(jq -r .title "$F") — org $ORG, desde $FROM"
+echo "$(jq -r -L "$LIB" 'include "dashboard-format"; dash_title' "$F") — org $ORG, desde $FROM"
 while IFS= read -r row; do
   title=$(j "$row" .t); typ=$(j "$row" .typ); expr=$(j "$row" .e)
   if [ "$(j "$row" .ds)" = loki ]; then uid=$LOKI; else uid=$PROM; fi

@@ -2,6 +2,16 @@
 
 Historial de cambios que afectan al uso del repo, del más reciente al más antiguo. Añade una entrada por cada cambio visible: nuevos scripts, cambios de comportamiento o de documentación importantes.
 
+## 2026-11-06
+
+### Añadido
+- `scripts/dashboard-format.jq`: funciones comunes para leer cualquier formato de dashboard.
+
+### Cambiado
+- `convert-dashboard.sh` admite JSON o YAML en formato clásico, envuelto en `{"dashboard": ...}`, recurso v1, recurso v2 y spec v2 suelto. El v2 sigue en v2 y se le quitan los datos del servidor. Avisa si hay enlaces internos a otros UIDs.
+- `render.sh` valida también los paneles v2 y rechaza los que traen datos del servidor en `metadata`.
+- `dev/check-queries.sh` lee las consultas de los paneles v2.
+
 ## 2026-11-05
 
 ### Cambiado

@@ -86,13 +86,13 @@ Los clientes que tengan `kubernetes` en su config lo verán solos.
 
 ### Receta 5: crear un panel solo para un cliente
 
-1. Guarda el JSON en `tenants/<cliente>/custom/` (puedes hacer subcarpetas).
+1. Pásalo por `scripts/convert-dashboard.sh` con destino en `tenants/<cliente>/custom/` (puedes hacer subcarpetas). Admite cualquier formato de export de Grafana, incluido el v2 (`apiVersion: dashboard.grafana.app/v2`).
 2. Ponle un `uid` que ese cliente no tenga ya.
 3. Push. Solo ese cliente lo verá, en la carpeta "Paneles propios".
 
 En los paneles propios **sí** puedes usar el UID real de un datasource, pero es mejor usar las variables.
 
-También se puede crear desde Grafana: guardas el panel en la carpeta "Paneles propios" del cliente y Grafana abre una PR en GitHub. Cuando la aceptas, queda en el repo.
+También se puede crear desde Grafana, si la conexión tiene `workflows: ["branch"]`: al guardar en "Paneles propios" del cliente se crea una rama. Con Pure Git, el PR lo abres tú.
 
 ### Receta 6: añadir un cliente nuevo
 
