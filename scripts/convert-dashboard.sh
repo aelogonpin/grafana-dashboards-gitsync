@@ -60,8 +60,8 @@ jq -L "$LIB" --arg uid "$uid" '
         (if is_k8s then .spec else . end)
         | walk(
             if type != "object" then .
-            elif .kind? == "DataQuery" and .group? == "prometheus" then .datasource = {name: "${ds_mimir}"}
-            elif .kind? == "DataQuery" and .group? == "loki"       then .datasource = {name: "${ds_loki}"}
+            elif .group? == "prometheus" and has("datasource") then .datasource = {name: "${ds_mimir}"}
+            elif .group? == "loki" and has("datasource")       then .datasource = {name: "${ds_loki}"}
             elif has("datasource") then .datasource |= dsvar
             else . end)
         | .variables = (
